@@ -69,28 +69,22 @@ async def broadcast(interaction: discord.Interaction, message: str):
 
 # ลิสต์ของบอส
 boss_list = {
-    1: "ถ้ำ 1 ทิกดัล",
-    2: "ถ้ำ 2 กัทฟิลเลียน",
-    3: "ถ้ำ 3 โมดี",
-    4: "ถ้ำ 3 โฮทูรา",
-    5: "ถ้ำ 4 เพนเดอเร",
-    6: "ถ้ำ 4 สตอร์มิด",
-    7: "ถ้ำ 5 มัลทานิส",
-    8: "ถ้ำ 6 ดัลดาโรก้า",
-    9: "อัศวินแห่งความตาย",
-    10: "พื้นที่ 2 ฮาคีร์",
-    11: "พื้นที่ 3 ดามิโรส",
-    12: "พื้นที่ 4 คาฟคา",
-    13: "อัศวินแห่งความพินาศ",
-    14: "World Dungeon"
+    1: "ชั้นล่าง โฮทูร่า",
+    2: "ถ้ำ 7 ทิกดัลที่บ้าคลั่ง",
+    3: "ถ้ำ 8 กัทฟิลเลียนชั่วร้าย",
+    4: "ถ้ำ 9 แพนเดอเรปลุกพลัง",
+    5: "พื้นที่ใหม่ 2 ฮาคีร์",
+    6: "พื้นที่ใหม่ 3 ดามิโรส",
+    7: "พื้นที่ใหม่ 4 คาฟคา",
+    8: "อัศวินแห่งความพินาศ"
 }
 
 
 # คำสั่ง slash สำหรับบอร์ดแคสต์ข้อความแบบมีแพทเทิร์น
 @bot.tree.command(name='pattern_broadcast', description='บอร์ดแคสต์ข้อความตามแพทเทิร์น')
 @app_commands.describe(week="สัปดาห์ที่ต้องการบอร์ดแคสต์")
-@app_commands.describe(boss_id="รหัสบอส (1-14)")
-@app_commands.describe(date="วันที่ (เช่น 25/10/2024)")
+@app_commands.describe(boss_id="รหัสบอส (1-8)")
+@app_commands.describe(date="วันที่ (เช่น 25/10/24)")
 @app_commands.describe(time="เวลาที่จะบอร์ดแคสต์ (เช่น 18:00)")
 
 async def pattern_broadcast(interaction: discord.Interaction, week: int, boss_id: int, date: str, time: str):
