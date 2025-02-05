@@ -1,22 +1,20 @@
 import os
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord import app_commands
-from datetime import datetime, timedelta
 
 from myserver import server_on
 
-# กำหนด prefix และ intents
+# กำหนด prefix ของคำสั่ง
 intents = discord.Intents.default()
-intents.message_content = True  # เปิดให้ bot อ่าน message ได้
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
 # บันทึกข้อมูลบอสถาวร
 boss_timers = []
 broadcast_channels = {}
 boss_alert_channels = {}  # บันทึกห้องแจ้งเตือนบอสของแต่ละเซิร์ฟเวอร์
 
-# รายชื่อบอส
+# ลิสต์ของบอส
 boss_list = {
     1: "ชั้นล่าง โฮทูร่า (Hotura)",
     2: "ถ้ำ 7 ทิกดัลที่บ้าคลั่ง (Cave 7)",
@@ -28,6 +26,22 @@ boss_list = {
     8: "อัศวินแห่งความพินาศ (Ruined Knight)",
     9: "ประกายไฟแห่งการดับสูญ (Tandallon)"
 }
+
+# คำสั่งตอบสนองเมื่อบอทออนไลน์
+@bot.event
+async def on_ready():
+    print("Bot Online!")
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} command(s)")
+    except Exception as e:
+        print(f"Error syncing commands: {e}")
+
+# คำสั่ง slash สำหรับทักทาย
+@bot.tree.command(name='hellbot', description='Replies with hello')
+async def hellobot(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
+    await interaction.followup.send('Hello! It’s me, Bot DISCORD')
 
 # -------- ระบบกำหนดห้องแจ้งเตือนบอส --------
 @bot.tree.command(name="set_boss_channel", description="กำหนดห้องสำหรับแจ้งเตือนบอส")
@@ -84,34 +98,65 @@ async def send_boss_alert(boss, role, owner, message):
             embed.add_field(name="แจ้งเตือน", value=message, inline=False)
             await channel.send(content=role.mention, embed=embed)
 
-# คำสั่ง sync command หากยังไม่พบ Slash Commands
-@bot.command()
-async def sync(ctx):
-    await bot.tree.sync()
-    await ctx.send("✅ คำสั่งทั้งหมดซิงค์เรียบร้อยแล้ว!")
-
-# คำสั่ง slash สำหรับทักทาย
-@bot.tree.command(name='hellbot', description='Replies with hello')
-async def hellobot(interaction: discord.Interaction):
+# -------- คำสั่ง slash สำหรับเพิ่มห้องเพื่อบอร์ดแคสต์ -------- 
+@bot.tree.command(name='add_channel', description='เพิ่มห้องบอร์ดแคสต์')
+async def add_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
-    await interaction.followup.send('Hello! It’s me, Bot DISCORD')
+    guild_id = interaction.guild_id
+    if guild_id not in broadcast_channels:
+        broadcast_channels[guild_id] = []
+
+    if channel.id not in broadcast_channels[guild_id]:
+        broadcast_channels[guild_id].append(channel.id)
+        await interaction.followup.send(f"เพิ่มห้อง {channel.name} เข้าสู่รายการบอร์ดแคสต์เรียบร้อยแล้ว!",
+                                        ephemeral=True)
+    else:
+        await interaction.followup.send(f"ห้อง {channel.name} มีอยู่ในรายการบอร์ดแคสต์อยู่แล้ว", ephemeral=True)
+
+
+# คำสั่ง slash สำหรับลบห้องออกจากรายการบอร์ดแคสต์
+@bot.tree.command(name='remove_channel', description='ลบห้องออกจากบอร์ดแคสต์')
+async def remove_channel(interaction: discord.Interaction, channel: discord.TextChannel):
+    await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
+    guild_id = interaction.guild_id
+    if guild_id in broadcast_channels and channel.id in broadcast_channels[guild_id]:
+        broadcast_channels[guild_id].remove(channel.id)
+        await interaction.followup.send(f"ลบห้อง {channel.name} ออกจากรายการบอร์ดแคสต์แล้ว", ephemeral=True)
+    else:
+        await interaction.followup.send(f"ไม่พบห้อง {channel.name} ในรายการบอร์ดแคสต์", ephemeral=True)
+
+
+# คำสั่ง slash สำหรับบอร์ดแคสต์ข้อความแบบมีแพทเทิร์น
+@bot.tree.command(name='pattern_broadcast', description='บอร์ดแคสต์ข้อความตามแพทเทิร์น')
+@app_commands.describe(week="สัปดาห์ที่ต้องการบอร์ดแคสต์")
+@app_commands.describe(boss_id="รหัสบอส (1-8)")
+@app_commands.describe(date="วันที่ (เช่น 25/10/24)")
+@app_commands.describe(time="เวลาที่จะบอร์ดแคสต์ (เช่น 18:00)")
+
+async def pattern_broadcast(interaction: discord.Interaction, week: int, boss_id: int, date: str, time: str):
+    await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
+    if boss_id in boss_list:
+        boss_name = boss_list[boss_id]
+        message = f"Week {week}: {boss_name} {date} {time}"
+
+        guild_id = interaction.guild_id
+        if guild_id in broadcast_channels:
+            for channel_id in broadcast_channels[guild_id]:
+                channel = bot.get_channel(channel_id)
+                if channel:
+                    await channel.send(message)
+            await interaction.followup.send("บอร์ดแคสต์ข้อความตามแพทเทิร์นเรียบร้อยแล้ว!", ephemeral=True)
+        else:
+            await interaction.followup.send("ยังไม่มีห้องที่ตั้งค่าให้บอร์ดแคสต์", ephemeral=True)
+    else:
+        await interaction.followup.send("รหัสบอสไม่ถูกต้อง โปรดลองใหม่", ephemeral=True)
 
 @bot.event
 async def on_ready():
-    print("✅ บอทออนไลน์! กำลังซิงค์ Slash Commands...")
-    try:
-        synced = await bot.tree.sync()
-        print(f"{len(synced)} command(s) synced successfully!")
-    except Exception as e:
-        print(f"❌ Error syncing commands: {e}")
-
+    print("✅ บอทออนไลน์!")
     check_boss_timers.start()
 
 server_on()
 
 # เริ่มรันบอท
-TOKEN = os.getenv('TOKEN')
-if not TOKEN:
-    print("❌ Error: TOKEN ไม่พบใน environment variables!")
-else:
-    bot.run(TOKEN)
+bot.run(os.getenv('TOKEN'))
