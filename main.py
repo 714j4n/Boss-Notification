@@ -74,7 +74,7 @@ async def pattern_broadcast(interaction: discord.Interaction, boss_id: int, date
     await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
     if boss_id in boss_list:
         boss_name = boss_list[boss_id]
-        message = f"# ✦ Boss:{boss_name} Date:{date} Time:{time} ✦"
+        message = f"## ✦ Boss:{boss_name} Date:{date} Time:{time} ✦"
 
         guild_id = interaction.guild_id
         if guild_id in broadcast_channels:
@@ -117,9 +117,21 @@ async def set_boss_channel(interaction: discord.Interaction, channel: discord.Te
                                     ephemeral=True)
 
 # ----------- ระบบแจ้งเตือนเวลาบอส -----------
+from enum import Enum
+
+class OwnerType(Enum):
+    KNIGHT = "knight"
+    BISHOP = "bishop"
+
 @bot.tree.command(name='boss_set_notification', description='ตั้งค่าแจ้งเตือนบอส')
-async def boss_set_notification(interaction: discord.Interaction, boss_id: int, hours: int, minutes: int, owner: str,
-                                role: discord.Role):
+async def boss_set_notification(
+    interaction: discord.Interaction,
+    boss_id: int,
+    hours: int,
+    minutes: int,
+    owner: OwnerType,
+    role: discord.Role
+):
     await interaction.response.defer(ephemeral=True)
     guild_id = interaction.guild_id
     if guild_id not in boss_notifications:
@@ -130,29 +142,33 @@ async def boss_set_notification(interaction: discord.Interaction, boss_id: int, 
     boss_notifications[guild_id].append({
         "boss_id": boss_id,
         "spawn_time": spawn_time,
-        "owner": owner,
+        "owner": owner.value,
         "role": role.id
     })
 
     await interaction.followup.send(
         f"ตั้งค่าแจ้งเตือนบอส {boss_list[boss_id]} เรียบร้อยแล้ว! จะเกิดในอีก {hours} ชั่วโมง {minutes} นาที.",
-        ephemeral=True)
-    await schedule_boss_notifications(guild_id, boss_id, spawn_time, role)
+        ephemeral=True
+    )
+    await schedule_boss_notifications(guild_id, boss_id, spawn_time, owner.value, role)
 
 
-async def schedule_boss_notifications(guild_id, boss_id, spawn_time, role):
+async def schedule_boss_notifications(guild_id, boss_id, spawn_time, owner, role):
     now = datetime.datetime.utcnow()
     time_until_spawn = (spawn_time - now).total_seconds()
     time_before_five_min = max(time_until_spawn - 300, 0)
+    owner_icon = "💙" if owner == "knight" else "💚"
 
     await asyncio.sleep(time_before_five_min)
     if guild_id in boss_channels:
         channel_id = boss_channels[guild_id]
         channel = bot.get_channel(channel_id)
         if channel:
-            embed = discord.Embed(title="แจ้งเตือนล่วงหน้า",
-                                  description=f"{role.mention} บอส {boss_list[boss_id]} จะเกิดในอีก 5 นาที!",
-                                  color=discord.Color.yellow())
+            embed = discord.Embed(
+                title="𝐁𝐨𝐬𝐬 𝐍𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧!!",
+                description=f"{owner_icon} 𝐁𝐨𝐬𝐬 {boss_list[boss_id]} 𝐖𝐢𝐥𝐥 𝐬𝐩𝐚𝐰𝐧 𝐢𝐧 𝟓 𝐦𝐢𝐧𝐮𝐭𝐞𝐬! {role.mention}",
+                color=discord.Color.yellow()
+            )
             await channel.send(embed=embed)
 
     await asyncio.sleep(300)
@@ -160,9 +176,11 @@ async def schedule_boss_notifications(guild_id, boss_id, spawn_time, role):
         channel_id = boss_channels[guild_id]
         channel = bot.get_channel(channel_id)
         if channel:
-            embed = discord.Embed(title="บอสเกิดแล้ว!",
-                                  description=f"{role.mention} บอส {boss_list[boss_id]} เกิดแล้ว!",
-                                  color=discord.Color.red())
+            embed = discord.Embed(
+                title="𝐁𝐨𝐬𝐬 𝐡𝐚𝐬 𝐬𝐩𝐚𝐰𝐧!!",
+                description=f"{owner_icon} 𝐁𝐨𝐬𝐬 {boss_list[boss_id]} 𝐡𝐚𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐞𝐭'𝐬 𝐟𝐢𝐠𝐡𝐭! {role.mention}",
+                color=discord.Color.red()
+            )
             await channel.send(embed=embed)
 
 
@@ -183,12 +201,10 @@ async def boss_notification_list(interaction: discord.Interaction):
 
     for idx, notif in enumerate(sorted_notifications, start=1):
         boss_name = boss_list[notif['boss_id']]
-        time_remaining = notif['spawn_time'] - now
-        hours, remainder = divmod(int(time_remaining.total_seconds()), 3600)
-        minutes, _ = divmod(remainder, 60)
+        spawn_time = notif['spawn_time'].strftime("%H:%M")  # แปลงเวลาที่บอสจะเกิดเป็นรูปแบบ HH:MM
         owner = notif['owner']
-        embed.add_field(name=f"{idx}. บอส {boss_name}",
-                        value=f"เกิดอีก {hours} ชั่วโมง {minutes} นาที ของ {owner}",
+        embed.add_field(name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{boss_name}",
+                        value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{spawn_time} 𝐎𝐰𝐧𝐞𝐫 ﹕{owner}",
                         inline=False)
 
     await interaction.followup.send(embed=embed, ephemeral=True)
