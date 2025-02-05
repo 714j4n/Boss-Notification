@@ -10,7 +10,7 @@ from myserver import server_on
 from enum import Enum
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
-tree = app_commands.CommandTree(bot)
+tree = bot.tree
 
 @bot.event
 async def on_ready():
