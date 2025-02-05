@@ -29,6 +29,9 @@ boss_list = {
 # -------- ระบบกำหนดห้องแจ้งเตือนบอส --------
 @bot.tree.command(name="set_boss_channel", description="กำหนดห้องสำหรับแจ้งเตือนบอส")
 async def set_boss_channel(interaction: discord.Interaction, channel: discord.TextChannel):
+    if not interaction.guild_id:
+        await interaction.response.send_message("❌ ไม่สามารถกำหนดห้องได้ใน DM", ephemeral=True)
+        return
     guild_id = interaction.guild_id
     boss_alert_channels[guild_id] = channel.id
     await interaction.response.send_message(f"✅ ตั้งห้องแจ้งเตือนบอสเป็น {channel.mention} แล้ว!", ephemeral=True)
@@ -36,7 +39,7 @@ async def set_boss_channel(interaction: discord.Interaction, channel: discord.Te
 # -------- ระบบตั้งเวลาแจ้งเตือนบอส --------
 class BossView(discord.ui.View):
     def __init__(self, boss_name, alert_time, role, owner):
-        super().__init__(timeout=30)
+        super().__init__(timeout=120)  # เพิ่ม timeout 2 นาที
         self.boss_name = boss_name
         self.alert_time = alert_time
         self.role = role
@@ -52,6 +55,9 @@ class BossView(discord.ui.View):
 async def boss_set(interaction: discord.Interaction, boss: str, time: str, role: discord.Role, owner: str):
     if owner.lower() not in ["knight", "bishop"]:
         await interaction.response.send_message("❌ โปรดเลือกเจ้าของบอสเป็น knight หรือ bishop", ephemeral=True)
+        return
+    if boss not in boss_list.values():
+        await interaction.response.send_message("❌ โปรดเลือกชื่อบอสที่ถูกต้อง", ephemeral=True)
         return
     try:
         user_time = datetime.strptime(time, "%H:%M")
@@ -84,6 +90,7 @@ async def send_boss_alert(boss, role, owner, message):
 @bot.event
 async def on_ready():
     print("✅ บอทออนไลน์!")
-    check_boss_timers.start()
+    if not check_boss_timers.is_running():
+        check_boss_timers.start()
 
 bot.run(os.getenv('TOKEN'))
