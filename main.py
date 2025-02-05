@@ -92,11 +92,8 @@ async def hellobot(interaction: discord.Interaction):
 @bot.event
 async def on_ready():
     print("✅ บอทออนไลน์! กำลังซิงค์ Slash Commands...")
-    try:
-        synced = await bot.tree.sync()
-        print(f"✅ ซิงค์คำสั่งสำเร็จ ({len(synced)} คำสั่ง)")
-    except Exception as e:
-        print(f"❌ ซิงค์คำสั่งล้มเหลว: {e}")
+    synced = await bot.tree.sync()
+    print(f"{len(synced)} command(s)")
 
     check_boss_timers.start()
 
