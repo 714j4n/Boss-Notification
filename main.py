@@ -66,7 +66,6 @@ async def remove_channel(interaction: discord.Interaction, channel: discord.Text
 
 # ----------- สำหรับบอร์ดแคสต์ข้อความไปยังห้องที่กำหนดไว้  -----------
 @bot.tree.command(name='pattern_broadcast', description='บอร์ดแคสต์ข้อความตามแพทเทิร์น')
-@app_commands.describe(week="สัปดาห์ที่ต้องการบอร์ดแคสต์")
 @app_commands.describe(boss_id="รหัสบอส (1-9)")
 @app_commands.describe(date="วันที่ (เช่น 25/10/24)")
 @app_commands.describe(time="เวลาบอสเกิด (เช่น 18:00)")
