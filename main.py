@@ -64,31 +64,6 @@ async def remove_channel(interaction: discord.Interaction, channel: discord.Text
     else:
         await interaction.followup.send(f"ไม่พบห้อง {channel.name} ในรายการบอร์ดแคสต์", ephemeral=True)
 
-# ----------- ปุ่มยืนยัน/ยกเลิกสำหรับ pattern_broadcast -----------
-class ConfirmBroadcastView(View):
-    def __init__(self, interaction, message, guild_id):
-        super().__init__()
-        self.interaction = interaction
-        self.message = message
-        self.guild_id = guild_id
-
-    @discord.ui.button(label="ยืนยัน", style=discord.ButtonStyle.green)
-    async def confirm(self, interaction: discord.Interaction, button: Button):
-        if self.guild_id in broadcast_channels:
-            for channel_id in broadcast_channels[self.guild_id]:
-                channel = bot.get_channel(channel_id)
-                if channel:
-                    await channel.send(self.message)
-            await self.interaction.followup.send("บอร์ดแคสต์ข้อความตามแพทเทิร์นเรียบร้อยแล้ว!", ephemeral=True)
-        else:
-            await self.interaction.followup.send("ยังไม่มีห้องที่ตั้งค่าให้บอร์ดแคสต์", ephemeral=True)
-        self.stop()
-
-    @discord.ui.button(label="ยกเลิก", style=discord.ButtonStyle.red)
-    async def cancel(self, interaction: discord.Interaction, button: Button):
-        await self.interaction.followup.send("ยกเลิกการบอร์ดแคสต์", ephemeral=True)
-        self.stop()
-
 # ----------- สำหรับบอร์ดแคสต์ข้อความไปยังห้องที่กำหนดไว้  -----------
 @bot.tree.command(name='pattern_broadcast', description='บอร์ดแคสต์ข้อความตามแพทเทิร์น')
 @app_commands.describe(week="สัปดาห์ที่ต้องการบอร์ดแคสต์")
@@ -220,4 +195,6 @@ async def boss_notification_list(interaction: discord.Interaction):
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 server_on()
+
+# เริ่มรันบอท
 bot.run(os.getenv('TOKEN'))
