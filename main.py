@@ -5,12 +5,14 @@ from discord import app_commands
 from discord.ui import View, Button
 import datetime
 import asyncio
+import pytz
 
 from myserver import server_on
 from enum import Enum
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 tree = bot.tree
+local_tz = pytz.timezone('Asia/Bangkok')  # ใช้เวลาประเทศไทย
 
 @bot.event
 async def on_ready():
@@ -150,7 +152,7 @@ async def boss_set_notification(
     if guild_id not in boss_notifications:
         boss_notifications[guild_id] = []
 
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(local_tz)
     spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)
 
     boss_notifications[guild_id].append({
@@ -221,10 +223,10 @@ async def boss_notification_list(interaction: discord.Interaction):
 
     for idx, notif in enumerate(sorted_notifications, start=1):
         boss_name = notif['boss_name'].replace("_", " ")  # เปลี่ยน _ เป็นช่องว่าง
-        spawn_time = notif['spawn_time'].strftime("%H:%M")  # แปลงเวลาที่บอสจะเกิดเป็นรูปแบบ HH:MM
+        spawn_time = notif['spawn_time'].astimezone(local_tz).strftime("%H:%M")  # แปลงเวลาที่บอสจะเกิดเป็นรูปแบบ HH:MM
         owner = notif['owner']
-        embed.add_field(name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{boss_name}",
-                        value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{spawn_time} 𝐎𝐰𝐧𝐞𝐫 ﹕{owner}",
+        embed.add_field(name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{boss_name} 𝐎𝐰𝐧𝐞𝐫 ﹕{owner}",
+                        value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{spawn_time} (𝗨𝗧𝗖 +𝟳)",
                         inline=False)
 
     await interaction.followup.send(embed=embed, ephemeral=True)
