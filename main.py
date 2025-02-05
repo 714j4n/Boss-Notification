@@ -35,13 +35,12 @@ async def set_boss_channel(interaction: discord.Interaction, channel: discord.Te
 
 # -------- ระบบตั้งเวลาแจ้งเตือนบอส --------
 class BossView(discord.ui.View):
-    def __init__(self, boss_name, alert_time, role, owner, interaction):
+    def __init__(self, boss_name, alert_time, role, owner):
         super().__init__(timeout=30)
         self.boss_name = boss_name
         self.alert_time = alert_time
         self.role = role
         self.owner = owner
-        self.interaction = interaction
 
     @discord.ui.button(label="✅ ยืนยัน", style=discord.ButtonStyle.green)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -56,7 +55,7 @@ async def boss_set(interaction: discord.Interaction, boss: str, time: str, role:
         return
     try:
         user_time = datetime.strptime(time, "%H:%M")
-        view = BossView(boss, user_time, role, owner, interaction)
+        view = BossView(boss, user_time, role, owner)
         await interaction.response.send_message(f"ต้องการตั้งเวลา {boss} ({owner}) ที่ {user_time.strftime('%H:%M')} ใช่หรือไม่?", view=view)
     except ValueError:
         await interaction.response.send_message("❌ โปรดใส่เวลาในรูปแบบ HH:MM", ephemeral=True)
