@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 from myserver import server_on
 
 # กำหนด prefix และ intents
-intents = discord.Intents.all()
+intents = discord.Intents.default()
+intents.message_content = True  # เปิดให้ bot อ่าน message ได้
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # บันทึกข้อมูลบอสถาวร
@@ -83,6 +84,12 @@ async def send_boss_alert(boss, role, owner, message):
             embed.add_field(name="แจ้งเตือน", value=message, inline=False)
             await channel.send(content=role.mention, embed=embed)
 
+# คำสั่ง sync command หากยังไม่พบ Slash Commands
+@bot.command()
+async def sync(ctx):
+    await bot.tree.sync()
+    await ctx.send("✅ คำสั่งทั้งหมดซิงค์เรียบร้อยแล้ว!")
+
 # คำสั่ง slash สำหรับทักทาย
 @bot.tree.command(name='hellbot', description='Replies with hello')
 async def hellobot(interaction: discord.Interaction):
@@ -92,12 +99,19 @@ async def hellobot(interaction: discord.Interaction):
 @bot.event
 async def on_ready():
     print("✅ บอทออนไลน์! กำลังซิงค์ Slash Commands...")
-    synced = await bot.tree.sync()
-    print(f"{len(synced)} command(s)")
+    try:
+        synced = await bot.tree.sync()
+        print(f"{len(synced)} command(s) synced successfully!")
+    except Exception as e:
+        print(f"❌ Error syncing commands: {e}")
 
     check_boss_timers.start()
 
 server_on()
 
 # เริ่มรันบอท
-bot.run(os.getenv('TOKEN'))
+TOKEN = os.getenv('TOKEN')
+if not TOKEN:
+    print("❌ Error: TOKEN ไม่พบใน environment variables!")
+else:
+    bot.run(TOKEN)
