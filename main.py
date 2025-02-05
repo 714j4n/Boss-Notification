@@ -1,7 +1,8 @@
 import os
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands
+from datetime import datetime, timedelta
 
 from myserver import server_on
 
@@ -98,7 +99,7 @@ async def send_boss_alert(boss, role, owner, message):
             embed.add_field(name="แจ้งเตือน", value=message, inline=False)
             await channel.send(content=role.mention, embed=embed)
 
-# -------- คำสั่ง slash สำหรับเพิ่มห้องเพื่อบอร์ดแคสต์ -------- 
+# -------- คำสั่ง slash สำหรับเพิ่มห้องเพื่อบอร์ดแคสต์ --------
 @bot.tree.command(name='add_channel', description='เพิ่มห้องบอร์ดแคสต์')
 async def add_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
