@@ -229,7 +229,7 @@ async def boss_notification_list(interaction: discord.Interaction):
                         value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{spawn_time} (𝗨𝗧𝗖 +𝟳)",
                         inline=False)
 
-    await interaction.followup.send(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=False)
 
 server_on()
 
