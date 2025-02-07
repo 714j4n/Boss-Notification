@@ -124,11 +124,32 @@ class ConfirmView(View):
 # ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส  -----------
 @bot.tree.command(name='set_boss_channel', description='ตั้งค่าช่องสำหรับแจ้งเตือนบอส')
 async def set_boss_channel(interaction: discord.Interaction, channel: discord.TextChannel):
-    await interaction.response.defer(ephemeral=True)
+    await interaction.response.defer()
     view = ConfirmView(interaction, channel)
     await interaction.followup.send(f"คุณต้องการตั้งค่าช่อง {channel.name} เป็นช่องแจ้งเตือนบอสหรือไม่?", view=view,
                                     ephemeral=True)
 
+# ----------- ตั้งค่า Role ที่ต้องการให้บอทแท็กในการแจ้งเตือนบอส -----------
+@bot.tree.command(name="set_role_notification", description="ตั้งค่า Role ที่ต้องการให้บอทแท็กในการแจ้งเตือนบอส")
+@app_commands.describe(role="เลือก Role ที่ต้องการให้แท็ก")
+async def set_role_notification(interaction: discord.Interaction, role: discord.Role):
+    guild_id = interaction.guild_id
+    boss_roles[guild_id] = role.id  # บันทึก Role ID
+    await interaction.response.send_message(f"✅ ตั้งค่า Role สำหรับแจ้งเตือนบอสเป็น {role.mention} แล้ว!", ephemeral=True)
+
+# ----------- ดู Role ที่ตั้งค่าแจ้งเตือนบอส -----------
+@bot.tree.command(name="view_role_notification", description="ดู Role ที่ตั้งค่าแจ้งเตือนบอส")
+async def view_role_notification(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    role_id = boss_roles.get(guild_id)
+    if role_id:
+        role = interaction.guild.get_role(role_id)
+        if role:
+            await interaction.response.send_message(f"🔹 Role สำหรับแจ้งเตือนบอสที่ตั้งค่าไว้คือ {role.mention}", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ ไม่พบ Role ที่ตั้งค่าไว้ อาจถูกลบไปแล้ว", ephemeral=True)
+    else:
+        await interaction.response.send_message("❌ ยังไม่มีการตั้งค่า Role สำหรับแจ้งเตือนบอส", ephemeral=True)
 
 # ----------- ระบบแจ้งเตือนเวลาบอส -----------
 from discord import app_commands
@@ -206,30 +227,71 @@ async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, ro
             )
             await channel.send(embed=embed)
 
+# ตัวแปรเก็บข้อมูลบอสแจ้งเตือน
+boss_notifications = {}  # {guild_id: [{"boss_name": "..", "spawn_time": datetime, "owner": ".."}]}
+boss_roles = {}  # {guild_id: role_id}  # สำหรับแท็ก Role ที่ต้องการตอนกดประกาศ
+
+local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งเวลาเป็นไทย
+
 # ----------- คำสั่งดูรายการบอสที่ตั้งค่าไว้ -----------
-@bot.tree.command(name='boss_notification_list', description='ดูรายการบอสที่ตั้งค่าแจ้งเตือน')
+@bot.tree.command(name="boss_notification_list", description="ดูรายการบอสที่ตั้งค่าแจ้งเตือน")
 async def boss_notification_list(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     guild_id = interaction.guild_id
 
     if guild_id not in boss_notifications or not boss_notifications[guild_id]:
-        await interaction.followup.send("ไม่มีบอสที่ถูกตั้งค่าแจ้งเตือน", ephemeral=True)
+        await interaction.followup.send("❌ ไม่มีบอสที่ถูกตั้งค่าแจ้งเตือน", ephemeral=True)
         return
 
     now = datetime.datetime.utcnow()
-    sorted_notifications = sorted(boss_notifications[guild_id], key=lambda x: x['spawn_time'])
 
+    # 🔹 ลบรายการบอสที่เวลาสปอนผ่านไปแล้ว
+    boss_notifications[guild_id] = [notif for notif in boss_notifications[guild_id] if notif["spawn_time"] > now]
+
+    if not boss_notifications[guild_id]:  # ถ้าลบแล้วไม่มีบอสเหลือ
+        await interaction.followup.send("❌ ไม่มีบอสที่ถูกตั้งค่าแจ้งเตือน", ephemeral=True)
+        return
+
+
+    sorted_notifications = sorted(boss_notifications[guild_id], key=lambda x: x["spawn_time"])
     embed = discord.Embed(title="📜 รายการแจ้งเตือนบอส", color=discord.Color.blue())
 
     for idx, notif in enumerate(sorted_notifications, start=1):
-        boss_name = notif['boss_name'].replace("_", " ")  # เปลี่ยน _ เป็นช่องว่าง
-        spawn_time = notif['spawn_time'].astimezone(local_tz).strftime("%H:%M")  # แปลงเวลาที่บอสจะเกิดเป็นรูปแบบ HH:MM
-        owner = notif['owner']
+        boss_name = notif["boss_name"].replace("_", " ")
+        spawn_time = notif["spawn_time"].astimezone(local_tz).strftime("%H:%M")
+        owner = notif["owner"]
         embed.add_field(name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{boss_name} 𝐎𝐰𝐧𝐞𝐫 ﹕{owner}",
                         value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{spawn_time} (𝗨𝗧𝗖 +𝟳)",
                         inline=False)
 
-    await interaction.followup.send(embed=embed, ephemeral=False)
+    # 🔹 ปุ่มสำหรับ "ประกาศ" หรือ "ปิด"
+    class ConfirmView(discord.ui.View):
+        def __init__(self):
+            super().__init__(timeout=60)
+
+        @discord.ui.button(label="📢 ประกาศ", style=discord.ButtonStyle.green)
+        async def announce(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await interaction.response.defer()
+
+            channel_id = 123456789012345678  # เปลี่ยนเป็น ID ของช่องแจ้งเตือน
+            channel = interaction.guild.get_channel(channel_id)
+            if not channel:
+                await interaction.followup.send("❌ ไม่พบช่องแจ้งเตือน!", ephemeral=True)
+                return
+
+            # 🔹 ดึง Role ที่ต้องแท็ก
+            role_id = boss_roles.get(guild_id)
+            role_mention = f"<@&{role_id}>" if role_id else "@everyone"
+
+            await channel.send(f"{role_mention} 📢 **อัปเดตรายการบอส!**", embed=embed)
+            await interaction.followup.send("✅ ประกาศไปที่ห้องแจ้งเตือนเรียบร้อย!", ephemeral=True)
+
+        @discord.ui.button(label="❌ ปิด", style=discord.ButtonStyle.red)
+        async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await interaction.response.defer()
+            await interaction.followup.send("✅ ปิดการดูรายการแจ้งเตือน", ephemeral=True)
+
+    await interaction.followup.send(embed=embed, ephemeral=True, view=ConfirmView())
 
 server_on()
 
