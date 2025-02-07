@@ -415,6 +415,7 @@ class UpdateInfoView(discord.ui.View):
         modal = UpdateInfoModal(self.guild_id)
         await interaction.response.send_modal(modal)
 
+# ----------- ห้องสำหรับโพสต์ให้กดอัพเดต -----------
 @bot.tree.command(name="update_info_post", description="ตั้งค่าโพสต์สำหรับอัพเดทข้อมูล")
 async def update_info_post(interaction: discord.Interaction, title: str, description: str):
     embed = discord.Embed(
@@ -450,17 +451,6 @@ class ConfirmUpdateView(discord.ui.View):
         if admin_role not in [role.name for role in interaction.user.roles]:
             return await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ยกเลิกการอัพเดทนี้", ephemeral=True)
         await interaction.message.delete()
-
-    # ----------- ห้องสำหรับโพสต์ให้กดอัพเดต -----------
-    @bot.tree.command(name="update_info_post", description="ตั้งค่าโพสต์สำหรับอัพเดทข้อมูล")
-    async def update_info_post(interaction: discord.Interaction, title: str, description: str):
-        embed = discord.Embed(
-            title=title,
-            description=description,
-            color=discord.Color.blurple()
-        )
-        view = UpdateInfoView(interaction.guild_id)
-        await interaction.response.send_message(embed=embed, view=view)
 
     # ----------- ตั้งค่ายศกิลด์ที่ใช้งาน -----------
     @bot.tree.command(name="set_guild_active", description="ตั้งค่า Role ของกิลด์ที่ใช้งาน")
