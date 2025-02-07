@@ -13,6 +13,9 @@ from enum import Enum
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 tree = bot.tree
 local_tz = pytz.timezone('Asia/Bangkok')  # ใช้เวลาประเทศไทย
+# ตัวแปรเก็บข้อมูลบอสแจ้งเตือน
+boss_notifications = {}  # {guild_id: [{"boss_name": "..", "spawn_time": datetime, "owner": ".."}]}
+boss_roles = {}  # {guild_id: role_id}  # สำหรับแท็ก Role ที่ต้องการตอนกดประกาศ
 
 @bot.event
 async def on_ready():
@@ -25,7 +28,7 @@ async def on_ready():
 
 
 broadcast_channels = {}
-boss_channels = {}
+boss_channels = {}  # เก็บค่า channel_id ของแต่ละเซิร์ฟเวอร์
 boss_notifications = {}  # เก็บข้อมูลแจ้งเตือนบอส
 
 
@@ -88,7 +91,7 @@ async def remove_channel(interaction: discord.Interaction, channel: discord.Text
 async def pattern_broadcast(interaction: discord.Interaction, boss_name: BossName, date: str, time: str):
     await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
 
-    boss_display_name = boss_name.value.replace("_", " ")  # แปลงชื่อให้อ่านง่าย
+    boss_display_name = boss_name.value  # ✅ ไม่ต้อง replace แล้ว
     message = f"## ✦～ 𝐁𝐨𝐬𝐬﹕{boss_display_name} 𝐃𝐚𝐭𝐞﹕{date} {time} ～✦"
 
     guild_id = interaction.guild_id
@@ -124,6 +127,8 @@ class ConfirmView(View):
 # ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส  -----------
 @bot.tree.command(name='set_boss_channel', description='ตั้งค่าช่องสำหรับแจ้งเตือนบอส')
 async def set_boss_channel(interaction: discord.Interaction, channel: discord.TextChannel):
+    guild_id = interaction.guild_id  # ✅ ดึง ID ของเซิร์ฟเวอร์
+    boss_channels[guild_id] = channel.id  # ✅ บันทึกค่า channel.id ตาม guild
     await interaction.response.defer()
     view = ConfirmView(interaction, channel)
     await interaction.followup.send(f"คุณต้องการตั้งค่าช่อง {channel.name} เป็นช่องแจ้งเตือนบอสหรือไม่?", view=view,
@@ -152,8 +157,6 @@ async def view_role_notification(interaction: discord.Interaction):
         await interaction.response.send_message("❌ ยังไม่มีการตั้งค่า Role สำหรับแจ้งเตือนบอส", ephemeral=True)
 
 # ----------- ระบบแจ้งเตือนเวลาบอส -----------
-from discord import app_commands
-
 
 class OwnerType(Enum):
     KNIGHT = "knight"
@@ -173,7 +176,7 @@ async def boss_set_notification(
     if guild_id not in boss_notifications:
         boss_notifications[guild_id] = []
 
-    now = datetime.datetime.now(local_tz)
+    now = datetime.datetime.now(local_tz)  # ✅ ใช้ timezone ที่กำหนด
     spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)
 
     boss_notifications[guild_id].append({
@@ -227,10 +230,6 @@ async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, ro
             )
             await channel.send(embed=embed)
 
-# ตัวแปรเก็บข้อมูลบอสแจ้งเตือน
-boss_notifications = {}  # {guild_id: [{"boss_name": "..", "spawn_time": datetime, "owner": ".."}]}
-boss_roles = {}  # {guild_id: role_id}  # สำหรับแท็ก Role ที่ต้องการตอนกดประกาศ
-
 local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งเวลาเป็นไทย
 
 # ----------- คำสั่งดูรายการบอสที่ตั้งค่าไว้ -----------
@@ -273,7 +272,12 @@ async def boss_notification_list(interaction: discord.Interaction):
         async def announce(self, interaction: discord.Interaction, button: discord.ui.Button):
             await interaction.response.defer()
 
-            channel_id = 123456789012345678  # เปลี่ยนเป็น ID ของช่องแจ้งเตือน
+            guild_id = interaction.guild_id  # ✅ ดึง ID ของเซิร์ฟเวอร์
+            channel_id = boss_channels.get(guild_id)  # ✅ ดึงค่า channel_id ที่บันทึกไว้
+            if not channel_id:
+                await interaction.followup.send("❌ ยังไม่ได้ตั้งค่าช่องแจ้งเตือนบอส!", ephemeral=True)
+                return
+
             channel = interaction.guild.get_channel(channel_id)
             if not channel:
                 await interaction.followup.send("❌ ไม่พบช่องแจ้งเตือน!", ephemeral=True)
