@@ -32,7 +32,7 @@ boss_channels = {}  # เก็บค่า channel_id ของแต่ละ�
 boss_notifications = {}  # เก็บข้อมูลแจ้งเตือนบอส
 role_notifications = {} # ก็บข้อมูล role ที่ใช้แท็กตอนแจ้งเตือนบอส
 
-# ----------- ดูี่ตั้งค่า -----------
+# ----------- ดูที่ตั้งค่า -----------
 @bot.tree.command(name="view_setting", description="ดูการตั้งค่าทั้งหมดในเซิร์ฟเวอร์")
 async def view_setting(interaction: discord.Interaction):
     guild_id = interaction.guild_id  # ✅ ดึง ID ของเซิร์ฟเวอร์
@@ -164,7 +164,7 @@ async def set_role_notification(interaction: discord.Interaction, role: discord.
     boss_roles[guild_id] = role.id  # บันทึก Role ID
     await interaction.response.send_message(f"✅ ตั้งค่า Role สำหรับแจ้งเตือนบอสเป็น {role.mention} แล้ว!", ephemeral=True)
 
-# ----------- ระบบแจ้งเตือนเวลาบอส -----------
+# ----------- คำสั่งแจ้งเตือนเวลาบอส -----------
 class OwnerType(Enum):
     KNIGHT = "knight"
     BISHOP = "bishop"
@@ -176,21 +176,31 @@ async def boss_set_notification(
         hours: int,
         minutes: int,
         owner: OwnerType,
-        role: discord.Role
+        role: discord.Role = None  # ทำให้ role เป็น optional
 ):
     await interaction.response.defer(ephemeral=True)
     guild_id = interaction.guild_id
-    if guild_id not in boss_notifications:
-        boss_notifications[guild_id] = []
+
+    # ใช้ role ที่ตั้งค่าไว้ ถ้าไม่มีให้ใช้ที่ส่งมา
+    if role is None:
+        role_id = boss_roles.get(guild_id)
+        if role_id:
+            role = interaction.guild.get_role(role_id)
+
+    if role is None:  # ถ้ายังไม่มี role ให้แจ้งเตือน
+        return await interaction.followup.send("❌ ยังไม่ได้ตั้งค่า Role สำหรับแจ้งเตือนบอส!", ephemeral=True)
 
     now = datetime.datetime.now(local_tz)  # ✅ ใช้ timezone ที่กำหนด
     spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)
 
+    if guild_id not in boss_notifications:
+        boss_notifications[guild_id] = []
+
     boss_notifications[guild_id].append({
-        "boss_name": boss_name.name,  # เก็บ key ของ Enum เช่น "CAVE_7"
+        "boss_name": boss_name.name,
         "spawn_time": spawn_time,
         "owner": owner.value,
-        "role": role.id
+        "role": role.id  # ใช้ role ที่ดึงมา
     })
 
     await interaction.followup.send(
@@ -200,27 +210,35 @@ async def boss_set_notification(
 
     await schedule_boss_notifications(guild_id, boss_name.name, spawn_time, owner.value, role)
 
-
+# ----------- ระบบแจ้งเตือนเวลาบอส -----------
 async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, role):
-    # ฟังก์ชันจัดการแจ้งเตือนบอส (ยังไม่แก้ไข แต่ต้องเปลี่ยน boss_id → boss_name)
-    pass
 
-async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, role):
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(local_tz)
+
+    # กรองรายการบอสที่ยังไม่เกิด
+    valid_notifications = [
+        notif for notif in boss_notifications[guild_id]
+        if notif["spawn_time"] > now
+    ]
+
     time_until_spawn = (spawn_time - now).total_seconds()
     time_before_five_min = max(time_until_spawn - 300, 0)
     owner_icon = "💙" if owner == "knight" else "💚"
 
-    boss_display_name = BossName[boss_name].value  # แปลงให้ชื่อดูดีขึ้น
+    boss_display_name = BossName[boss_name].value
 
-    await asyncio.sleep(time_before_five_min)
+    print(f"[DEBUG] Scheduling boss: {boss_name} at {spawn_time} (in {time_until_spawn}s)")
+
+    if time_before_five_min > 0: # รอ 5 นาทีก่อนบอสเกิด
+        await asyncio.sleep(time_before_five_min)
+
     if guild_id in boss_channels:
         channel_id = boss_channels[guild_id]
-        channel = bot.get_channel(channel_id)
+        channel = bot.get_channel(channel_id) or bot.get_channel(int(channel_id))
         if channel:
             embed = discord.Embed(
                 title="𝐁𝐨𝐬𝐬 𝐍𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧!!",
-                description=f"{owner_icon} 𝐁𝐨𝐬𝐬 {boss_display_name} 𝐢𝐬 𝐬𝐩𝐚𝐰𝐧𝐢𝐧𝐠 𝐢𝐧 𝟓 𝐦𝐢𝐧𝐮𝐭𝐞𝐬! {role.mention}",
+                description=f"{owner_icon} 𝐁𝐨𝐬𝐬 {boss_display_name} 𝐢𝐬 𝐬𝐩𝐚𝐰𝐧𝐢𝐧𝐠 𝐢𝐧 𝟓 𝐦𝐢𝐧𝐮𝐭𝐞𝐬! <@&{role}>",
                 color=discord.Color.yellow()
             )
             await channel.send(embed=embed)
@@ -228,11 +246,11 @@ async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, ro
     await asyncio.sleep(300)  # รอจนถึงเวลาบอสเกิด
     if guild_id in boss_channels:
         channel_id = boss_channels[guild_id]
-        channel = bot.get_channel(channel_id)
+        channel = bot.get_channel(channel_id) or bot.get_channel(int(channel_id))
         if channel:
             embed = discord.Embed(
                 title="𝐁𝐨𝐬𝐬 𝐡𝐚𝐬 𝐬𝐩𝐚𝐰𝐧!!",
-                description=f"{owner_icon} 𝐁𝐨𝐬𝐬 {boss_display_name} 𝐡𝐚𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐞𝐭'𝐬 𝐟𝐢𝐠𝐡𝐭! {role.mention}",
+                description=f"{owner_icon} 𝐁𝐨𝐬𝐬 {boss_display_name} 𝐡𝐚𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐞𝐭'𝐬 𝐟𝐢𝐠𝐡𝐭! <@&{role}>",
                 color=discord.Color.red()
             )
             await channel.send(embed=embed)
@@ -242,33 +260,36 @@ local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งเวลาเป็น
 # ----------- คำสั่งดูรายการบอสที่ตั้งค่าไว้ -----------
 @bot.tree.command(name="boss_notification_list", description="ดูรายการบอสที่ตั้งค่าแจ้งเตือน")
 async def boss_notification_list(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)  # ✅ ป้องกัน timeout
-    guild_id = interaction.guild_id
+    await interaction.response.defer(thinking=True)  # ลดดีเลย์จากการ defer
 
-    # ✅ ตรวจสอบว่ามีการแจ้งเตือนบอสไหม
+    guild_id = interaction.guild_id
     if guild_id not in boss_notifications or not boss_notifications[guild_id]:
         return await interaction.followup.send("❌ ไม่มีบอสที่ถูกตั้งค่าแจ้งเตือน", ephemeral=True)
 
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(local_tz)
 
-    # ✅ สร้างสำเนา list เพื่อป้องกันปัญหาลบข้อมูลโดยตรง
-    valid_notifications = [notif for notif in boss_notifications[guild_id] if notif["spawn_time"] > now]
+    # กรองรายการบอสที่ยังไม่เกิด
+    valid_notifications = [
+        notif for notif in boss_notifications[guild_id]
+        if notif["spawn_time"] > now
+    ]
 
-    if not valid_notifications:  # ถ้าลบแล้วไม่มีบอสเหลือ
+    if not valid_notifications:
         return await interaction.followup.send("❌ ไม่มีบอสที่ถูกตั้งค่าแจ้งเตือน", ephemeral=True)
 
-    # ✅ เรียงลำดับตามเวลาสปอน
     sorted_notifications = sorted(valid_notifications, key=lambda x: x["spawn_time"])
 
     embed = discord.Embed(title="📜 รายการแจ้งเตือนบอส", color=discord.Color.blue())
 
-    for idx, notif in enumerate(sorted_notifications, start=1):
+    for idx, notif in enumerate(sorted_notifications[:10], start=1):  # จำกัดสูงสุด 10 รายการ
         boss_name = notif["boss_name"].replace("_", " ")
-        spawn_time = notif["spawn_time"].astimezone(local_tz).strftime("%H:%M")  # ✅ ตรวจสอบ local_tz
+        spawn_time = notif["spawn_time"].astimezone(local_tz).strftime("%H:%M")
         owner = notif["owner"]
         embed.add_field(name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{boss_name} 𝐎𝐰𝐧𝐞𝐫 ﹕{owner}",
                         value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{spawn_time} (𝗨𝗧𝗖 +𝟳)",
                         inline=False)
+
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
     # ✅ ปุ่ม "ประกาศ" หรือ "ปิด"
     class ConfirmView(discord.ui.View):
