@@ -413,7 +413,16 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
         self.add_item(self.new_data)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Embed สำหรับห้อง update log
+        guild_id = interaction.guild_id
+        log_channel_id = update_log_channels.get(guild_id)  # ✅ ใช้ Dictionary update_log_channels
+
+        if not log_channel_id:
+            return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่าห้อง Update Log!", ephemeral=True)
+
+        log_channel = interaction.guild.get_channel(log_channel_id)
+        if not log_channel:
+            return await interaction.response.send_message("❌ ไม่พบห้อง Update Log ในเซิร์ฟเวอร์นี้!", ephemeral=True)
+
         embed = discord.Embed(
             title="📝 คำขออัพเดทข้อมูล",
             description=f"ประเภท: {self.update_type}\n"
@@ -424,15 +433,24 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
         )
         embed.set_footer(text="รอการยืนยันจากแอดมิน")
 
-        # ปุ่มสำหรับยืนยัน/ยกเลิก
         view = AdminConfirmView(update_type=self.update_type, modal_data={
             "member_id": self.member_id.value,
             "old_data": self.old_data.value,
             "new_data": self.new_data.value,
         })
 
+        await log_channel.send(embed=embed, view=view)
+        await interaction.response.send_message("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
+
         # ส่ง Embed ไปที่ห้อง update log
-        log_channel = interaction.guild.get_channel(update_log_channel_id)
+        log_channel_id = update_log_channels.get(interaction.guild_id)  # ใช้ Dictionary update_log_channels
+        if not log_channel_id:
+            return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่าห้อง Update Log!", ephemeral=True)
+
+        log_channel = interaction.guild.get_channel(log_channel_id)
+        if not log_channel:
+            return await interaction.response.send_message("❌ ไม่พบห้อง Update Log ในเซิร์ฟเวอร์นี้!", ephemeral=True)
+
         await log_channel.send(embed=embed, view=view)
         await interaction.response.send_message("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
 
@@ -455,31 +473,25 @@ class AdminConfirmButton(discord.ui.Button):
         self.modal_data = modal_data
 
     async def callback(self, interaction: discord.Interaction):
-        if "Admin" not in [role.name for role in interaction.user.roles]:
-            await interaction.response.send_message("❌ คุณไม่มีสิทธิ์กดปุ่มนี้", ephemeral=True)
-            return
+        guild_id = interaction.guild_id
+        admin_role = admin_roles.get(guild_id)  # ✅ ใช้ Dictionary admin_roles
 
+        if not admin_role:
+            return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่า Role แอดมินในเซิร์ฟเวอร์นี้!", ephemeral=True)
+
+        if admin_role not in [role.name for role in interaction.user.roles]:
+            return await interaction.response.send_message(f"❌ คุณไม่มีสิทธิ์กดปุ่มนี้ (ต้องมี Role: {admin_role})", ephemeral=True)
+
+        # ✅ ดำเนินการตามประเภท
         if self.confirm:
-            # ดำเนินการตามประเภท
-            if self.update_type == "name":
-                member = interaction.guild.get_member_named(f"{self.modal_data['member_id']} - {self.modal_data['old_data']}")
-                if member:
-                    await member.edit(nick=f"{self.modal_data['member_id']} - {self.modal_data['new_data']}")
-                    await interaction.message.edit(content="✅ ชื่อถูกอัพเดทเรียบร้อย", view=None)
-
-            elif self.update_type == "guild":
-                member = interaction.guild.get_member_named(f"{self.modal_data['member_id']} - {self.modal_data['old_data']}")
-                if member:
-                    old_role = discord.utils.get(interaction.guild.roles, name=self.modal_data['old_data'])
-                    new_role = discord.utils.get(interaction.guild.roles, name=self.modal_data['new_data'])
-                    if old_role:
-                        await member.remove_roles(old_role)
-                    if new_role:
-                        await member.add_roles(new_role)
-                    await interaction.message.edit(content="✅ กิลด์ถูกอัพเดทเรียบร้อย", view=None)
+            member = interaction.guild.get_member_named(f"{self.modal_data['member_id']} - {self.modal_data['old_data']}")
+            if member:
+                await member.edit(nick=f"{self.modal_data['member_id']} - {self.modal_data['new_data']}")
+                await interaction.message.edit(content="✅ ชื่อถูกอัพเดทเรียบร้อย", view=None)
 
         else:
             await interaction.message.edit(content="❌ คำขอถูกยกเลิก", view=None)
+
 
 # ----------- ตั้งค่าช่องและ Role -----------
 update_log_channel_id = None  # เก็บ ID ห้อง update log
@@ -493,9 +505,10 @@ async def set_update_log_channel(interaction: discord.Interaction, channel: disc
 # ----------- ตั้งค่ายศแอดมิน -----------
 @bot.tree.command(name="set_admin_role", description="ตั้งค่า Role แอดมิน")
 async def set_admin_role(interaction: discord.Interaction, role: discord.Role):
-    global admin_role_name
-    admin_role_name = role.name
-    await interaction.response.send_message(f"✅ ตั้งค่า Role แอดมินเป็น {role.mention} เรียบร้อย", ephemeral=True)
+    guild_id = interaction.guild_id
+    admin_roles[guild_id] = role.name  # เก็บ Role แอดมินตามเซิร์ฟเวอร์
+
+    await interaction.response.send_message(f"✅ ตั้งค่า Role แอดมินเป็น {role.mention} สำหรับเซิร์ฟเวอร์นี้", ephemeral=True)
 
 # ----------- ตั้งค่ายศกิลด์ที่ใช้งาน -----------
 @bot.tree.command(name="set_guild_active", description="ตั้งค่า Role ของกิลด์ที่ใช้งาน")
