@@ -414,7 +414,7 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
 
     async def on_submit(self, interaction: discord.Interaction):
         guild_id = interaction.guild_id
-        log_channel_id = update_log_channels.get(guild_id)  # ✅ ใช้ Dictionary update_log_channels
+        log_channel_id = update_log_channels.get(guild_id)
 
         if not log_channel_id:
             return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่าห้อง Update Log!", ephemeral=True)
@@ -422,6 +422,10 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
         log_channel = interaction.guild.get_channel(log_channel_id)
         if not log_channel:
             return await interaction.response.send_message("❌ ไม่พบห้อง Update Log ในเซิร์ฟเวอร์นี้!", ephemeral=True)
+
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member:
+            return await interaction.response.send_message("❌ ไม่พบข้อมูลสมาชิก!", ephemeral=True)
 
         embed = discord.Embed(
             title="📝 คำขออัพเดทข้อมูล",
@@ -433,23 +437,36 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
         )
         embed.set_footer(text="รอการยืนยันจากแอดมิน")
 
+        # ✅ ตรวจสอบการเปลี่ยนกิลด์
+        if self.update_type == "guild":
+            old_guild = self.old_data.value  # กิลด์เดิม
+            new_guild = self.new_data.value  # กิลด์ใหม่
+
+            old_role_id = guild_active_roles.get(guild_id, {}).get(old_guild)
+            new_role_id = guild_active_roles.get(guild_id, {}).get(new_guild)
+
+            if old_role_id and new_role_id:
+                old_role = interaction.guild.get_role(old_role_id)
+                new_role = interaction.guild.get_role(new_role_id)
+
+                if old_role in member.roles:
+                    await member.remove_roles(old_role)  # ลบ Role เดิม
+                if new_role:
+                    await member.add_roles(new_role)  # เพิ่ม Role ใหม่
+
+                embed.add_field(name="📌 การอัปเดตกิลด์", value=f"ลบ {old_guild} และเพิ่ม {new_guild}", inline=False)
+
+        # ✅ ตรวจสอบการเปลี่ยนชื่อ
+        elif self.update_type == "name":
+            new_nickname = f"{self.member_id.value} - {self.new_data.value}"
+            await member.edit(nick=new_nickname)
+            embed.add_field(name="📌 การอัปเดตชื่อ", value=f"เปลี่ยนชื่อเป็น {new_nickname}", inline=False)
+
         view = AdminConfirmView(update_type=self.update_type, modal_data={
             "member_id": self.member_id.value,
             "old_data": self.old_data.value,
             "new_data": self.new_data.value,
         })
-
-        await log_channel.send(embed=embed, view=view)
-        await interaction.response.send_message("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
-
-        # ส่ง Embed ไปที่ห้อง update log
-        log_channel_id = update_log_channels.get(interaction.guild_id)  # ใช้ Dictionary update_log_channels
-        if not log_channel_id:
-            return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่าห้อง Update Log!", ephemeral=True)
-
-        log_channel = interaction.guild.get_channel(log_channel_id)
-        if not log_channel:
-            return await interaction.response.send_message("❌ ไม่พบห้อง Update Log ในเซิร์ฟเวอร์นี้!", ephemeral=True)
 
         await log_channel.send(embed=embed, view=view)
         await interaction.response.send_message("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
@@ -499,8 +516,8 @@ admin_role_name = "Admin"  # ชื่อ Role แอดมิน
 # ----------- ห้องสำหรับบันทึกอัพเดต -----------
 @bot.tree.command(name="set_update_log_channel", description="ตั้งค่าห้อง update log")
 async def set_update_log_channel(interaction: discord.Interaction, channel: discord.TextChannel):
-    global update_log_channel_id
-    update_log_channel_id = channel.id
+    guild_id = interaction.guild_id
+    update_log_channels[guild_id] = channel.id  # ✅ แก้ไขให้ใช้ dictionary ที่ถูกต้อง
     await interaction.response.send_message(f"✅ ตั้งค่าห้อง update log เป็น {channel.mention} เรียบร้อย", ephemeral=True)
 # ----------- ตั้งค่ายศแอดมิน -----------
 @bot.tree.command(name="set_admin_role", description="ตั้งค่า Role แอดมิน")
