@@ -414,7 +414,14 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
     async def on_submit(self, interaction: discord.Interaction):
         guild_id = interaction.guild_id
         log_channel_id = update_log_channels.get(guild_id)
+        # ✅ ดึงข้อมูลผู้ใช้
+        user = interaction.user  # ผู้ใช้ที่ส่งฟอร์ม
+        avatar_url = user.avatar.url if user.avatar else user.default_avatar.url  # รูปโปรไฟล์
 
+        # ✅ ดึงวันเวลาปัจจุบันเป็น Asia/Bangkok
+        now = datetime.datetime.now(local_tz)
+        formatted_date = now.strftime("%d/%m/%Y %H:%M")  # แปลงวันที่เป็น DD/MM/YYYY HH:MM
+        
         # ✅ ตรวจสอบห้อง update log
         log_channel = bot.get_channel(log_channel_id) if log_channel_id else None
         if not log_channel:
@@ -432,10 +439,6 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
         if not member:
             return await interaction.response.send_message("❌ ไม่พบข้อมูลสมาชิก!", ephemeral=True)
 
-            # ✅ ดึงข้อมูลผู้ใช้
-            user = interaction.user  # ผู้ใช้ที่ส่งฟอร์ม
-            avatar_url = user.avatar.url if user.avatar else user.default_avatar.url  # รูปโปรไฟล์
-
         # ✅ สร้าง Embed แจ้งเตือนอัปเดต
         embed = discord.Embed(
             title="📝 𝐃𝐚𝐭𝐚 𝐮𝐩𝐝𝐚𝐭𝐞",
@@ -447,6 +450,7 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
                         f"╰  {self.old_data.value} ▸ {self.new_data.value}",
             color=discord.Color.yellow(),
         )
+        embed.set_thumbnail(url=avatar_url)  # ✅ เพิ่มรูปโปรไฟล์ของผู้กรอกฟอร์ม
         embed.set_footer(text=f"ID: {user.id}")
 
         # ✅ ตรวจสอบการเปลี่ยนกิลด์
