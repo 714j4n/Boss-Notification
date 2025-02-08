@@ -7,6 +7,7 @@ import datetime
 import asyncio
 import pytz
 
+from discord import ui, Embed
 from discord.ui import Modal, Select, TextInput, View
 from myserver import server_on
 from enum import Enum
