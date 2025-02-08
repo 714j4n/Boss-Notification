@@ -466,7 +466,7 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
             "member_id": self.member_id.value,
             "old_data": self.old_data.value,
             "new_data": self.new_data.value,
-        })
+        }, member=interaction.guild.get_member(interaction.user.id))
         try:
             await interaction.response.send_message("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
         except discord.errors.InteractionResponded:
@@ -475,42 +475,64 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
 
 # ----------- ยืนยัน/ยกเลิกคำขอ -----------
 class AdminConfirmView(discord.ui.View):
-    def __init__(self, update_type, modal_data):
+    def __init__(self, update_type, modal_data, member):
         super().__init__(timeout=None)
         self.update_type = update_type
         self.modal_data = modal_data
-        self.add_item(AdminConfirmButton("ยืนยัน", True, self.update_type, self.modal_data))
-        self.add_item(AdminConfirmButton("ยกเลิก", False, self.update_type, self.modal_data))
+        self.member = member
+        self.add_item(AdminConfirmButton("ยืนยัน", True, self.update_type, self.modal_data, self.member))
+        self.add_item(AdminConfirmButton("ยกเลิก", False, self.update_type, self.modal_data, self.member))
 
 
 class AdminConfirmButton(discord.ui.Button):
-    def __init__(self, label, confirm, update_type, modal_data):
+    def __init__(self, label, confirm, update_type, modal_data, member):
         style = discord.ButtonStyle.success if confirm else discord.ButtonStyle.danger
         super().__init__(label=label, style=style)
         self.confirm = confirm
         self.update_type = update_type
         self.modal_data = modal_data
+        self.member = member
 
     async def callback(self, interaction: discord.Interaction):
         guild_id = interaction.guild_id
-        admin_role = admin_roles.get(guild_id)  # ✅ ใช้ Dictionary admin_roles
+        admin_role = admin_roles.get(guild_id)
 
         if not admin_role:
-            return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่า Role แอดมินในเซิร์ฟเวอร์นี้!", ephemeral=True)
+            return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่า Role แอดมิน!", ephemeral=True)
 
         if admin_role not in [role.name for role in interaction.user.roles]:
             return await interaction.response.send_message(f"❌ คุณไม่มีสิทธิ์กดปุ่มนี้ (ต้องมี Role: {admin_role})", ephemeral=True)
 
-        # ✅ ดำเนินการตามประเภท
+        log_channel_id = update_log_channels.get(guild_id)
+        log_channel = interaction.guild.get_channel(log_channel_id)
+        if not log_channel:
+            return await interaction.response.send_message("❌ ไม่พบห้อง Update Log!", ephemeral=True)
+
         if self.confirm:
-            member = interaction.guild.get_member_named(f"{self.modal_data['member_id']} - {self.modal_data['old_data']}")
-            if member:
-                await member.edit(nick=f"{self.modal_data['member_id']} - {self.modal_data['new_data']}")
-                await interaction.message.edit(content="✅ ชื่อถูกอัพเดทเรียบร้อย", view=None)
+            if self.update_type == "name":
+                new_nickname = f"{self.modal_data['member_id']} - {self.modal_data['new_data']}"
+                await self.member.edit(nick=new_nickname)
+                result_msg = f"✅ ชื่อของ {self.member.mention} ถูกเปลี่ยนเป็น `{new_nickname}`"
 
+            elif self.update_type == "guild":
+                old_role_id = guild_active_roles.get(guild_id, {}).get(self.modal_data['old_data'])
+                new_role_id = guild_active_roles.get(guild_id, {}).get(self.modal_data['new_data'])
+                if old_role_id:
+                    old_role = interaction.guild.get_role(old_role_id)
+                    if old_role in self.member.roles:
+                        await self.member.remove_roles(old_role)
+                if new_role_id:
+                    new_role = interaction.guild.get_role(new_role_id)
+                    await self.member.add_roles(new_role)
+                result_msg = f"✅ อัปเดตกิลด์ของ {self.member.mention} เป็น `{self.modal_data['new_data']}`"
+
+            elif self.update_type == "job":
+                result_msg = f"✅ อาชีพของ {self.member.mention} ถูกเปลี่ยนเป็น `{self.modal_data['new_data']}`"
+
+            await log_channel.send(result_msg)
+            await interaction.message.edit(content=result_msg, embed=None, view=None)
         else:
-            await interaction.message.edit(content="❌ คำขอถูกยกเลิก", view=None)
-
+            await interaction.message.edit(content="❌ คำขอถูกยกเลิก", embed=None, view=None)
 
 # ----------- ตั้งค่าช่องและ Role -----------
 update_log_channel_id = None  # เก็บ ID ห้อง update log
