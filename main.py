@@ -367,12 +367,11 @@ update_log_channel_id = None  # Initially unset
 async def update_info_post(interaction: discord.Interaction, channel: discord.TextChannel):
     # สร้างข้อความ Embed สำหรับโพสต์
     embed = discord.Embed(
-        title="🛠️ อัพเดทข้อมูลของคุณ",
-        description="เลือกประเภทการอัพเดทข้อมูลที่คุณต้องการด้านล่าง:\n"
-                    "- อัพเดทชื่อ\n"
-                    "- อัพเดทอาชีพ\n"
-                    "- อัพเดทกิลด์\n\n"
-                    "กดที่ปุ่มเพื่อดำเนินการต่อ",
+        title="✿ เลือกประเภทข้อมูลที่ต้องการอัพเดทข้างล่าง.",
+        description="╰ 𝐂𝐡𝐨𝐨𝐬𝐞 𝐭𝐡𝐞 𝐮𝐩𝐝𝐚𝐭𝐞 𝐭𝐲𝐩𝐞 𝐛𝐞𝐥𝐨𝐰.\n\n"
+                    "> โน้ต﹕  เลขสมาชิก และ ชื่อกิลด์ต้องกรอกให้ถูกต้อง\n"
+                    "> Note﹕Member ID and Guild Name must be correct.\n"
+                    "> ╰・ eMystic │ zMystic │ โฮ่งโฮ่ง (Woof)",
         color=discord.Color.blue(),
     )
 
@@ -387,9 +386,9 @@ async def update_info_post(interaction: discord.Interaction, channel: discord.Te
 class UpdateInfoView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        self.add_item(UpdateButton("อัพเดทชื่อ", "name"))
-        self.add_item(UpdateButton("อัพเดทอาชีพ", "job"))
-        self.add_item(UpdateButton("อัพเดทกิลด์", "guild"))
+        self.add_item(UpdateButton("𝐍𝐚𝐦𝐞", "name"))
+        self.add_item(UpdateButton("𝐉𝐨𝐛", "job"))
+        self.add_item(UpdateButton("𝐆𝐮𝐢𝐥𝐝", "guild"))
 
 
 class UpdateButton(discord.ui.Button):
@@ -401,13 +400,13 @@ class UpdateButton(discord.ui.Button):
         await interaction.response.send_modal(UpdateModal(self.update_type))
 
 
-class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำหรับอัพเดท"):
+class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫𝐦"):
     def __init__(self, update_type):
         super().__init__()
         self.update_type = update_type
-        self.member_id = discord.ui.TextInput(label="เลขสมาชิก (5 หลัก)", required=True, max_length=5)
-        self.old_data = discord.ui.TextInput(label="ข้อมูลเดิม", required=True)
-        self.new_data = discord.ui.TextInput(label="ข้อมูลใหม่", required=True)
+        self.member_id = discord.ui.TextInput(label="𝐌𝐞𝐦𝐛𝐞𝐫 𝐧𝐮𝐦𝐛𝐞𝐫", required=True, max_length=5)
+        self.old_data = discord.ui.TextInput(label="𝐎𝐥𝐝 𝐃𝐚𝐭𝐚", required=True)
+        self.new_data = discord.ui.TextInput(label="𝐍𝐞𝐰 𝐃𝐚𝐭𝐚", required=True)
         self.add_item(self.member_id)
         self.add_item(self.old_data)
         self.add_item(self.new_data)
@@ -433,16 +432,22 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
         if not member:
             return await interaction.response.send_message("❌ ไม่พบข้อมูลสมาชิก!", ephemeral=True)
 
+            # ✅ ดึงข้อมูลผู้ใช้
+            user = interaction.user  # ผู้ใช้ที่ส่งฟอร์ม
+            avatar_url = user.avatar.url if user.avatar else user.default_avatar.url  # รูปโปรไฟล์
+
         # ✅ สร้าง Embed แจ้งเตือนอัปเดต
         embed = discord.Embed(
-            title="📝 คำขออัพเดทข้อมูล",
-            description=f"ประเภท: {self.update_type}\n"
-                        f"เลขสมาชิก: {self.member_id.value}\n"
-                        f"ข้อมูลเดิม: {self.old_data.value}\n"
-                        f"ข้อมูลใหม่: {self.new_data.value}",
+            title="📝 𝐃𝐚𝐭𝐚 𝐮𝐩𝐝𝐚𝐭𝐞",
+            description=f"• 𝐭𝐲𝐩𝐞\n"
+                        f"╰  {self.update_type}\n"
+                        f"• 𝐦𝐞𝐦𝐛𝐞𝐫 𝐧𝐮𝐦𝐛𝐞𝐫{self.member_id.value}\n"
+                        f"╰  {self.member_id.value}\n"
+                        f"• 𝐨𝐥𝐝 𝐝𝐚𝐭𝐚 ▸ 𝐧𝐞𝐰 𝐝𝐚𝐭𝐚\n"
+                        f"╰  {self.old_data.value} ▸ {self.new_data.value}",
             color=discord.Color.yellow(),
         )
-        embed.set_footer(text="บันทึกข้อมูลเรียบร้อยแล้ว")
+        embed.set_footer(text=f"ID: {user.id} • 𝐃𝐚𝐭𝐞 {discord.utils.format_dt(discord.utils.utcnow(), 'f')}")
 
         # ✅ ตรวจสอบการเปลี่ยนกิลด์
         if self.update_type == "guild":
@@ -460,17 +465,23 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
             if new_role:
                 await member.add_roles(new_role)
 
-            embed.add_field(name="📌 การอัปเดตกิลด์", value=f"ลบ {old_guild} และเพิ่ม {new_guild}", inline=False)
+            embed.add_field(name="📌 𝐓𝐫𝐚𝐧𝐬𝐟𝐞𝐫 𝐠𝐮𝐢𝐥𝐝", value=f"𝐌𝐨𝐯𝐞 𝐟𝐫𝐨𝐦 {old_guild} 𝐓𝐨 {new_guild}", inline=False)
 
         # ✅ ตรวจสอบการเปลี่ยนชื่อ
         elif self.update_type == "name":
-            new_nickname = f"{self.member_id.value} - {self.new_data.value}"[:32]  # ✅ จำกัดความยาวไม่เกิน 32 ตัวอักษร
+            current_nickname = member.display_name
+            if " - " in current_nickname:
+                member_id, _ = current_nickname.split(" - ", 1)  # แยกเลขสมาชิกออกจากชื่อ
+                new_nickname = f"{member_id} - {self.new_data.value}"[:32]  # ใช้เลขสมาชิกเดิม
+            else:
+                new_nickname = self.new_data.value[:32]  # ถ้าไม่มีเลขสมาชิก ให้ใช้ชื่อใหม่ตรงๆ
+
             await member.edit(nick=new_nickname)
-            embed.add_field(name="📌 การอัปเดตชื่อ", value=f"เปลี่ยนชื่อเป็น {new_nickname}", inline=False)
+            embed.add_field(name="📌 𝐂𝐡𝐚𝐧𝐠𝐞 𝐧𝐚𝐦𝐞", value=f"𝐂𝐡𝐚𝐧𝐠𝐞 𝐭𝐨 {self.new_data.value}", inline=False)
 
         # ✅ บันทึกลง Update Log และแจ้งเตือนสมาชิก
         await log_channel.send(embed=embed)
-        await interaction.response.send_message(f"✅ อัปเดต **{self.update_type}** สำเร็จแล้ว!", ephemeral=True)
+        await interaction.response.send_message(f"✅ **{self.update_type}** 𝐔𝐩𝐝𝐚𝐭𝐞𝐝!!", ephemeral=True)
 
 # ----------- ตั้งค่าช่องและ Role -----------
 update_log_channel_id = None  # เก็บ ID ห้อง update log
