@@ -467,9 +467,11 @@ class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำ�
             "old_data": self.old_data.value,
             "new_data": self.new_data.value,
         })
+        try:
+            await interaction.response.send_message("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
+        except discord.errors.InteractionResponded:
+            await interaction.followup.send("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
 
-        await log_channel.send(embed=embed, view=view)
-        await interaction.response.send_message("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
 
 # ----------- ยืนยัน/ยกเลิกคำขอ -----------
 class AdminConfirmView(discord.ui.View):
