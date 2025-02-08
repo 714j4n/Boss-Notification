@@ -497,17 +497,6 @@ async def set_admin_role(interaction: discord.Interaction, role: discord.Role):
     admin_role_name = role.name
     await interaction.response.send_message(f"✅ ตั้งค่า Role แอดมินเป็น {role.mention} เรียบร้อย", ephemeral=True)
 
-# ----------- ห้องสำหรับโพสต์ให้กดอัพเดต -----------
-@bot.tree.command(name="update_info_post", description="ตั้งค่าโพสต์สำหรับอัพเดทข้อมูล")
-async def update_info_post(interaction: discord.Interaction, title: str, description: str):
-    embed = discord.Embed(
-        title=title,
-        description=description,
-        color=discord.Color.blurple()
-    )
-    view = UpdateInfoView(interaction.guild_id)
-    await interaction.response.send_message(embed=embed, view=view)
-
 # ----------- ห้องสำหรับบันทึกอัพเดต -----------
 @bot.tree.command(name="set_update_log_channel", description="ตั้งค่าห้องดูประวัติการอัพเดท")
 async def set_update_log_channel(interaction: discord.Interaction, channel: discord.TextChannel):
@@ -528,7 +517,7 @@ async def set_guild_active(interaction: discord.Interaction, guild_name: str, ro
         f"✅ ตั้งค่า Role **{role.name}** สำหรับกิลด์ **{guild_name}** แล้ว!",
         ephemeral=True
     )
-    
+
 # ----------- ลบยศที่กิลด์ที่ใช้งาน -----------
 @bot.tree.command(name="remove_guild_active", description="Remove a guild from active selection")
 async def remove_guild_active(interaction: discord.Interaction, guild_name: str):
