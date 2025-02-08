@@ -15,14 +15,14 @@ bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 tree = bot.tree
 local_tz = pytz.timezone('Asia/Bangkok')  # ใช้เวลาประเทศไทย
 # ตัวแปรเก็บข้อมูลบอสแจ้งเตือน + เก็บค่าที่ตั้งค่าไว้สำหรับหลายเซิร์ฟเวอร์
-boss_notifications = {}  # {guild_id: [{"boss_name": "..", "spawn_time": datetime, "owner": ".."}]}
-boss_roles = {}  # {guild_id: role_id}  # สำหรับแท็ก Role ที่ต้องการตอนกดประกาศ
+boss_notifications = {}  # {guild_id: [{"boss_name": "..", "spawn_time": datetime, "owner": ".."}]} ✅
+boss_roles = {}  # {guild_id: role_id}  # สำหรับแท็ก Role ที่ต้องการตอนกดประกาศ ✅
 admin_roles = {}  # {guild_id: role_name}
 update_log_channels = {}  # {guild_id: channel_id}
 guild_active_roles = {}  # {guild_id: {guild_name: role_id}}
-broadcast_channels = {}
-boss_channels = {}  # เก็บค่า channel_id ของแต่ละเซิร์ฟเวอร์
-role_notifications = {} # เก็บข้อมูล role ที่ใช้แท็กตอนแจ้งเตือนบอส
+broadcast_channels = {} # ✅
+boss_channels = {}  # เก็บค่า channel_id ของแต่ละเซิร์ฟเวอร์ ✅
+role_notifications = {} # เก็บข้อมูล role ที่ใช้แท็กตอนแจ้งเตือนบอส ✅
 
 # -------------------------------------------------------
 @bot.event
@@ -35,15 +35,15 @@ async def on_ready():
         print(f"❌ Error syncing commands: {e}")
 # -------------------------------------------------------
 
-# ----------- ดูที่ตั้งค่าของเซิร์ฟเวอร์ *มีอัพเดท* -----------
+# ----------- ดูที่ตั้งค่าของเซิร์ฟเวอร์ *มีอัพเดท* ✅-----------
 @bot.tree.command(name="view_setting", description="ดูการตั้งค่าการแจ้งเตือน")
 async def view_setting(interaction: discord.Interaction):
     guild_id = interaction.guild_id
     role_id = boss_roles.get(guild_id)
 
-    role_display = f"<@&{role_id}>" if role_id else "❌ ยังไม่ได้ตั้งค่า"
-    boss_channel_id = boss_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า")
-    broadcast_channel_id = broadcast_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า")
+    role_display = f"<@&{role_id}>" if role_id else "❌ ยังไม่ได้ตั้งค่า" # ✅
+    boss_channel_id = boss_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า") # ✅
+    broadcast_channel_id = broadcast_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า") # ✅
     admin_role_name = admin_roles.get(guild_id, "❌ ยังไม่ได้ตั้งค่า")
     update_log_channel_id = update_log_channels.get(guild_id)
     update_log_channel_display = f"<#{update_log_channel_id}>" if update_log_channel_id else "❌ ยังไม่ได้ตั้งค่า"
@@ -51,9 +51,9 @@ async def view_setting(interaction: discord.Interaction):
     active_guilds_display = "\n".join([f"🔹 {name}: <@&{rid}>" for name, rid in active_guilds.items()]) if active_guilds else "❌ ยังไม่ได้ตั้งค่า"
 
     embed = discord.Embed(title="🔧 การตั้งค่าของเซิร์ฟเวอร์", color=discord.Color.blue())
-    embed.add_field(name="🔔 Role Notification", value=role_display, inline=False)
-    embed.add_field(name="📢 Boss Notification Channel", value=f"<#{boss_channel_id}>", inline=False)
-    embed.add_field(name="📡 Broadcast Channel", value=f"[{broadcast_channel_id}]", inline=False)
+    embed.add_field(name="🔔 Role Notification", value=role_display, inline=False) # ✅
+    embed.add_field(name="📢 Boss Notification Channel", value=f"<#{boss_channel_id}>", inline=False) # ✅
+    embed.add_field(name="📡 Broadcast Channel", value=f"[{broadcast_channel_id}]", inline=False) # ✅
     embed.add_field(name="🛠️ Admin Role", value=admin_role_name, inline=False)
     embed.add_field(name="📝 Update Log Channel", value=update_log_channel_display, inline=False)
     embed.add_field(name="🏰 Active Guilds", value=active_guilds_display, inline=False)
@@ -61,7 +61,7 @@ async def view_setting(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, ephemeral=True)
     print(f"[DEBUG] view_setting for guild {guild_id}")
 
-# ----------- กำหนดบอสเป็น Enum -----------
+# ----------- กำหนดบอสเป็น Enum ✅-----------
 class BossName(Enum):
     HOTURA = "Lower Cave"
     CAVE_7 = "Cave 7"
@@ -81,7 +81,7 @@ class BossName(Enum):
                 return boss
         return None
 
-# ----------- สำหรับเพิ่มห้องเพื่อบอร์ดแคสต์ -----------
+# ----------- สำหรับเพิ่มห้องเพื่อบอร์ดแคสต์ ✅-----------
 @bot.tree.command(name='add_channel', description='เพิ่มห้องบอร์ดแคสต์')
 async def add_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
@@ -97,7 +97,7 @@ async def add_channel(interaction: discord.Interaction, channel: discord.TextCha
         await interaction.followup.send(f"ห้อง {channel.name} มีอยู่ในรายการบอร์ดแคสต์อยู่แล้ว", ephemeral=True)
 
 
-# ----------- สำหรับลบห้องออกจากรายการบอร์ดแคสต์ -----------
+# ----------- สำหรับลบห้องออกจากรายการบอร์ดแคสต์ ✅-----------
 @bot.tree.command(name='remove_channel', description='ลบห้องออกจากบอร์ดแคสต์')
 async def remove_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
@@ -109,7 +109,7 @@ async def remove_channel(interaction: discord.Interaction, channel: discord.Text
         await interaction.followup.send(f"ไม่พบห้อง {channel.name} ในรายการบอร์ดแคสต์", ephemeral=True)
 
 
-# ----------- สำหรับบอร์ดแคสต์ข้อความไปยังห้องที่กำหนดไว้ -----------
+# ----------- สำหรับบอร์ดแคสต์ข้อความไปยังห้องที่กำหนดไว้ ✅-----------
 @bot.tree.command(name='pattern_broadcast', description='บอร์ดแคสต์ข้อความตามแพทเทิร์น')
 @app_commands.describe(
     boss_name="เลือกบอสจากรายการ",
@@ -153,7 +153,7 @@ class ConfirmView(View):
         await self.interaction.followup.send("ยกเลิกการตั้งค่าช่องแจ้งเตือนบอส", ephemeral=True)
         self.stop()
 
-# ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส  -----------
+# ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส ✅ -----------
 @bot.tree.command(name='set_boss_channel', description='ตั้งค่าช่องสำหรับแจ้งเตือนบอส')
 async def set_boss_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     guild_id = interaction.guild_id  # ✅ ดึง ID ของเซิร์ฟเวอร์
@@ -163,7 +163,7 @@ async def set_boss_channel(interaction: discord.Interaction, channel: discord.Te
         f"✅ ตั้งค่าช่อง {channel.mention} เป็นช่องแจ้งเตือนบอสเรียบร้อยแล้ว!", ephemeral=True
     )
 
-# ----------- ตั้งค่า Role ที่ต้องการให้บอทแท็กในการแจ้งเตือนบอส -----------
+# ----------- ตั้งค่า Role ที่ต้องการให้บอทแท็กในการแจ้งเตือนบอส ✅-----------
 @bot.tree.command(name="set_role_notification", description="ตั้งค่า Role สำหรับแจ้งเตือนบอส")
 async def set_role_notification(interaction: discord.Interaction, role: discord.Role):
     guild_id = interaction.guild_id
@@ -176,7 +176,7 @@ async def set_role_notification(interaction: discord.Interaction, role: discord.
 
     print(f"[DEBUG] boss_roles: {boss_roles}")
 
-# ----------- คำสั่งแจ้งเตือนเวลาบอส -----------
+# ----------- คำสั่งแจ้งเตือนเวลาบอส ✅-----------
 class OwnerType(Enum):
     KNIGHT = "knight"
     BISHOP = "bishop"
@@ -222,7 +222,7 @@ async def boss_set_notification(
 
     await schedule_boss_notifications(guild_id, boss_name.name, spawn_time, owner.value, role)
 
-# ----------- ระบบแจ้งเตือนเวลาบอส -----------
+# ----------- ระบบแจ้งเตือนเวลาบอส ✅-----------
 async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, role):
 
     now = datetime.datetime.now(local_tz)
@@ -269,7 +269,7 @@ async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, ro
 
 local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งเวลาเป็นไทย
 
-# ----------- คำสั่งดูรายการบอสที่ตั้งค่าไว้ -----------
+# ----------- คำสั่งดูรายการบอสที่ตั้งค่าไว้ ✅-----------
 @bot.tree.command(name="boss_notification_list", description="ดูรายการบอสที่ตั้งค่าแจ้งเตือน")
 async def boss_notification_list(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)  # ลดดีเลย์จากการ defer
@@ -362,6 +362,141 @@ guild_role_manager = GuildRoleManager()
 admin_role_name = None  # Initially unset
 update_log_channel_id = None  # Initially unset
 
+# ----------- สร้างโพสต์update -----------
+@bot.tree.command(name="update_info_post", description="สร้างโพสต์สำหรับอัพเดทข้อมูล")
+async def update_info_post(interaction: discord.Interaction, channel: discord.TextChannel):
+    # สร้างข้อความ Embed สำหรับโพสต์
+    embed = discord.Embed(
+        title="🛠️ อัพเดทข้อมูลของคุณ",
+        description="เลือกประเภทการอัพเดทข้อมูลที่คุณต้องการด้านล่าง:\n"
+                    "- อัพเดทชื่อ\n"
+                    "- อัพเดทอาชีพ\n"
+                    "- อัพเดทกิลด์\n\n"
+                    "กดที่ปุ่มเพื่อดำเนินการต่อ",
+        color=discord.Color.blue(),
+    )
+
+    # สร้าง View พร้อมปุ่ม
+    view = UpdateInfoView()
+
+    # ส่งข้อความพร้อมปุ่มไปยังช่องที่เลือก
+    await channel.send(embed=embed, view=view)
+    await interaction.response.send_message(f"✅ โพสต์สำหรับอัพเดทข้อมูลถูกสร้างใน {channel.mention}", ephemeral=True)
+
+# ----------- สร้างโพสต์ด้วยปุ่ม -----------
+class UpdateInfoView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(UpdateButton("อัพเดทชื่อ", "name"))
+        self.add_item(UpdateButton("อัพเดทอาชีพ", "job"))
+        self.add_item(UpdateButton("อัพเดทกิลด์", "guild"))
+
+
+class UpdateButton(discord.ui.Button):
+    def __init__(self, label, update_type):
+        super().__init__(label=label, style=discord.ButtonStyle.primary)
+        self.update_type = update_type
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(UpdateModal(self.update_type))
+
+
+class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำหรับอัพเดท"):
+    def __init__(self, update_type):
+        super().__init__()
+        self.update_type = update_type
+        self.member_id = discord.ui.TextInput(label="เลขสมาชิก (5 หลัก)", required=True, max_length=5)
+        self.old_data = discord.ui.TextInput(label="ข้อมูลเดิม", required=True)
+        self.new_data = discord.ui.TextInput(label="ข้อมูลใหม่", required=True)
+        self.add_item(self.member_id)
+        self.add_item(self.old_data)
+        self.add_item(self.new_data)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Embed สำหรับห้อง update log
+        embed = discord.Embed(
+            title="📝 คำขออัพเดทข้อมูล",
+            description=f"ประเภท: {self.update_type}\n"
+                        f"เลขสมาชิก: {self.member_id.value}\n"
+                        f"ข้อมูลเดิม: {self.old_data.value}\n"
+                        f"ข้อมูลใหม่: {self.new_data.value}",
+            color=discord.Color.yellow(),
+        )
+        embed.set_footer(text="รอการยืนยันจากแอดมิน")
+
+        # ปุ่มสำหรับยืนยัน/ยกเลิก
+        view = AdminConfirmView(update_type=self.update_type, modal_data={
+            "member_id": self.member_id.value,
+            "old_data": self.old_data.value,
+            "new_data": self.new_data.value,
+        })
+
+        # ส่ง Embed ไปที่ห้อง update log
+        log_channel = interaction.guild.get_channel(update_log_channel_id)
+        await log_channel.send(embed=embed, view=view)
+        await interaction.response.send_message("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
+
+# ----------- ยืนยัน/ยกเลิกคำขอ -----------
+class AdminConfirmView(discord.ui.View):
+    def __init__(self, update_type, modal_data):
+        super().__init__(timeout=None)
+        self.update_type = update_type
+        self.modal_data = modal_data
+        self.add_item(AdminConfirmButton("ยืนยัน", True, self.update_type, self.modal_data))
+        self.add_item(AdminConfirmButton("ยกเลิก", False, self.update_type, self.modal_data))
+
+
+class AdminConfirmButton(discord.ui.Button):
+    def __init__(self, label, confirm, update_type, modal_data):
+        style = discord.ButtonStyle.success if confirm else discord.ButtonStyle.danger
+        super().__init__(label=label, style=style)
+        self.confirm = confirm
+        self.update_type = update_type
+        self.modal_data = modal_data
+
+    async def callback(self, interaction: discord.Interaction):
+        if "Admin" not in [role.name for role in interaction.user.roles]:
+            await interaction.response.send_message("❌ คุณไม่มีสิทธิ์กดปุ่มนี้", ephemeral=True)
+            return
+
+        if self.confirm:
+            # ดำเนินการตามประเภท
+            if self.update_type == "name":
+                member = interaction.guild.get_member_named(f"{self.modal_data['member_id']} - {self.modal_data['old_data']}")
+                if member:
+                    await member.edit(nick=f"{self.modal_data['member_id']} - {self.modal_data['new_data']}")
+                    await interaction.message.edit(content="✅ ชื่อถูกอัพเดทเรียบร้อย", view=None)
+
+            elif self.update_type == "guild":
+                member = interaction.guild.get_member_named(f"{self.modal_data['member_id']} - {self.modal_data['old_data']}")
+                if member:
+                    old_role = discord.utils.get(interaction.guild.roles, name=self.modal_data['old_data'])
+                    new_role = discord.utils.get(interaction.guild.roles, name=self.modal_data['new_data'])
+                    if old_role:
+                        await member.remove_roles(old_role)
+                    if new_role:
+                        await member.add_roles(new_role)
+                    await interaction.message.edit(content="✅ กิลด์ถูกอัพเดทเรียบร้อย", view=None)
+
+        else:
+            await interaction.message.edit(content="❌ คำขอถูกยกเลิก", view=None)
+
+# ----------- ตั้งค่าช่องและ Role -----------
+update_log_channel_id = None  # เก็บ ID ห้อง update log
+admin_role_name = "Admin"  # ชื่อ Role แอดมิน
+
+@bot.tree.command(name="set_update_log_channel", description="ตั้งค่าห้อง update log")
+async def set_update_log_channel(interaction: discord.Interaction, channel: discord.TextChannel):
+    global update_log_channel_id
+    update_log_channel_id = channel.id
+    await interaction.response.send_message(f"✅ ตั้งค่าห้อง update log เป็น {channel.mention} เรียบร้อย", ephemeral=True)
+# -----------
+@bot.tree.command(name="set_admin_role", description="ตั้งค่า Role แอดมิน")
+async def set_admin_role(interaction: discord.Interaction, role: discord.Role):
+    global admin_role_name
+    admin_role_name = role.name
+    await interaction.response.send_message(f"✅ ตั้งค่า Role แอดมินเป็น {role.mention} เรียบร้อย", ephemeral=True)
+
 # ----------- ห้องสำหรับโพสต์ให้กดอัพเดต -----------
 @bot.tree.command(name="update_info_post", description="ตั้งค่าโพสต์สำหรับอัพเดทข้อมูล")
 async def update_info_post(interaction: discord.Interaction, title: str, description: str):
@@ -373,14 +508,12 @@ async def update_info_post(interaction: discord.Interaction, title: str, descrip
     view = UpdateInfoView(interaction.guild_id)
     await interaction.response.send_message(embed=embed, view=view)
 
-
 # ----------- ห้องสำหรับบันทึกอัพเดต -----------
 @bot.tree.command(name="set_update_log_channel", description="ตั้งค่าห้องดูประวัติการอัพเดท")
 async def set_update_log_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     guild_id = interaction.guild_id
     update_log_channels[guild_id] = channel.id  # ✅ บันทึกค่า ID ของห้องอัพเดท
     await interaction.response.send_message(f"✅ ตั้งค่าห้องอัพเดทเป็น {channel.mention}", ephemeral=True)
-
 
 # ----------- ตั้งค่ายศกิลด์ที่ใช้งาน -----------
 @bot.tree.command(name="set_guild_active", description="ตั้งค่า Role ของกิลด์ที่ใช้งาน")
@@ -395,7 +528,7 @@ async def set_guild_active(interaction: discord.Interaction, guild_name: str, ro
         f"✅ ตั้งค่า Role **{role.name}** สำหรับกิลด์ **{guild_name}** แล้ว!",
         ephemeral=True
     )
-
+    
 # ----------- ลบยศที่กิลด์ที่ใช้งาน -----------
 @bot.tree.command(name="remove_guild_active", description="Remove a guild from active selection")
 async def remove_guild_active(interaction: discord.Interaction, guild_name: str):
@@ -405,7 +538,6 @@ async def remove_guild_active(interaction: discord.Interaction, guild_name: str)
     else:
         await interaction.response.send_message("❌ ไม่มีกิลด์ที่ต้องการลบ.", ephemeral=True)
 
-
 # ----------- ตั้งค่ายศแอดมิน -----------
 @bot.tree.command(name="set_admin_role", description="ตั้งยศเป็นแอดมินเพื่อเช็คอัพเดท")
 async def set_admin_role(interaction: discord.Interaction, role: discord.Role):
@@ -413,83 +545,6 @@ async def set_admin_role(interaction: discord.Interaction, role: discord.Role):
     admin_roles[guild_id] = role.name
 
     await interaction.response.send_message(f"✅ ตั้ง {role.name} เป็นแอดมินในเซิร์ฟเวอร์นี้แล้ว", ephemeral=True)
-
-# ----------- Modal สำหรับกรอกอัพเดท -----------
-# เก็บค่าที่ตั้งค่าไว้สำหรับหลายเซิร์ฟเวอร์
-admin_roles = {}  # {guild_id: role_name}
-update_log_channels = {}  # {guild_id: channel_id}
-guild_active_roles = {}  # {guild_id: {guild_name: role_id}}
-
-class UpdateInfoModal(discord.ui.Modal, title="อัพเดตข้อมูล"):
-    def __init__(self, guild_id):
-        super().__init__()
-        self.guild_id = guild_id
-        self.update_count = 1  # เริ่มต้นที่ 1 หัวข้อ
-        self.max_updates = 3  # จำกัดสูงสุด 3 หัวข้อ
-        self.member_id = discord.ui.TextInput(label="เลขสมาชิก", placeholder="กรอกเลขสมาชิก", required=True)
-        self.updates = []  # เก็บรายการที่เปลี่ยน
-        self.add_item(self.member_id)
-        self.add_update_field()  # เพิ่มช่องการเปลี่ยนแปลงเริ่มต้น
-
-    def add_update_field(self):
-        if self.update_count > self.max_updates:
-            return
-        update_type = discord.ui.Select(
-            placeholder="เลือกประเภทการอัพเดต",
-            options=[
-                discord.SelectOption(label="เปลี่ยนชื่อ", value="change_name"),
-                discord.SelectOption(label="เปลี่ยนกิลด์", value="change_guild"),
-                discord.SelectOption(label="เปลี่ยนอาชีพ", value="change_job")
-            ]
-        )
-        self.add_item(update_type)
-        self.updates.append(update_type)
-        self.update_count += 1
-
-    @discord.ui.button(label="➕ เพิ่มหัวข้อ", style=discord.ButtonStyle.secondary)
-    async def add_update_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.update_count <= self.max_updates:
-            self.add_update_field()
-            await interaction.response.edit_message(view=self)
-        else:
-            await interaction.response.send_message("❌ ไม่สามารถเพิ่มได้เกิน 3 หัวข้อ", ephemeral=True)
-
-class UpdateInfoView(discord.ui.View):
-    def __init__(self, guild_id):
-        super().__init__(timeout=None)
-        self.guild_id = guild_id
-
-    @discord.ui.button(label="📝 อัพเดตข้อมูล", style=discord.ButtonStyle.green)
-    async def update_info_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        modal = UpdateInfoModal(self.guild_id)
-        await interaction.response.send_modal(modal)
-
-class ConfirmUpdateView(discord.ui.View):
-    def __init__(self, interaction, embed):
-        super().__init__()
-        self.interaction = interaction
-        self.embed = embed
-
-    @discord.ui.button(label="✅ ยืนยัน", style=discord.ButtonStyle.green)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        guild_id = interaction.guild_id
-        admin_role = admin_roles.get(guild_id)
-        if admin_role not in [role.name for role in interaction.user.roles]:
-            return await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ยืนยันการอัพเดทนี้", ephemeral=True)
-        log_channel = update_log_channels.get(guild_id)
-        if log_channel:
-            channel = interaction.guild.get_channel(log_channel)
-            await channel.send(f"✅ {interaction.user.display_name} อัพเดทข้อมูลแล้ว!", embed=self.embed)
-        await interaction.message.delete()
-
-    @discord.ui.button(label="❌ ยกเลิก", style=discord.ButtonStyle.red)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        guild_id = interaction.guild_id
-        admin_role = admin_roles.get(guild_id)
-        if admin_role not in [role.name for role in interaction.user.roles]:
-            return await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ยกเลิกการอัพเดทนี้", ephemeral=True)
-        await interaction.message.delete()
-
 
 server_on()
 
