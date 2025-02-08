@@ -484,25 +484,18 @@ class AdminConfirmButton(discord.ui.Button):
 # ----------- ตั้งค่าช่องและ Role -----------
 update_log_channel_id = None  # เก็บ ID ห้อง update log
 admin_role_name = "Admin"  # ชื่อ Role แอดมิน
-
+# ----------- ห้องสำหรับบันทึกอัพเดต -----------
 @bot.tree.command(name="set_update_log_channel", description="ตั้งค่าห้อง update log")
 async def set_update_log_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     global update_log_channel_id
     update_log_channel_id = channel.id
     await interaction.response.send_message(f"✅ ตั้งค่าห้อง update log เป็น {channel.mention} เรียบร้อย", ephemeral=True)
-# -----------
+# ----------- ตั้งค่ายศแอดมิน -----------
 @bot.tree.command(name="set_admin_role", description="ตั้งค่า Role แอดมิน")
 async def set_admin_role(interaction: discord.Interaction, role: discord.Role):
     global admin_role_name
     admin_role_name = role.name
     await interaction.response.send_message(f"✅ ตั้งค่า Role แอดมินเป็น {role.mention} เรียบร้อย", ephemeral=True)
-
-# ----------- ห้องสำหรับบันทึกอัพเดต -----------
-@bot.tree.command(name="set_update_log_channel", description="ตั้งค่าห้องดูประวัติการอัพเดท")
-async def set_update_log_channel(interaction: discord.Interaction, channel: discord.TextChannel):
-    guild_id = interaction.guild_id
-    update_log_channels[guild_id] = channel.id  # ✅ บันทึกค่า ID ของห้องอัพเดท
-    await interaction.response.send_message(f"✅ ตั้งค่าห้องอัพเดทเป็น {channel.mention}", ephemeral=True)
 
 # ----------- ตั้งค่ายศกิลด์ที่ใช้งาน -----------
 @bot.tree.command(name="set_guild_active", description="ตั้งค่า Role ของกิลด์ที่ใช้งาน")
@@ -517,7 +510,6 @@ async def set_guild_active(interaction: discord.Interaction, guild_name: str, ro
         f"✅ ตั้งค่า Role **{role.name}** สำหรับกิลด์ **{guild_name}** แล้ว!",
         ephemeral=True
     )
-
 # ----------- ลบยศที่กิลด์ที่ใช้งาน -----------
 @bot.tree.command(name="remove_guild_active", description="Remove a guild from active selection")
 async def remove_guild_active(interaction: discord.Interaction, guild_name: str):
@@ -526,14 +518,6 @@ async def remove_guild_active(interaction: discord.Interaction, guild_name: str)
         await interaction.response.send_message(f"✅ ลบกิลด์ที่ไม่ใช้งานออกแล้ว: {guild_name}", ephemeral=True)
     else:
         await interaction.response.send_message("❌ ไม่มีกิลด์ที่ต้องการลบ.", ephemeral=True)
-
-# ----------- ตั้งค่ายศแอดมิน -----------
-@bot.tree.command(name="set_admin_role", description="ตั้งยศเป็นแอดมินเพื่อเช็คอัพเดท")
-async def set_admin_role(interaction: discord.Interaction, role: discord.Role):
-    guild_id = interaction.guild_id
-    admin_roles[guild_id] = role.name
-
-    await interaction.response.send_message(f"✅ ตั้ง {role.name} เป็นแอดมินในเซิร์ฟเวอร์นี้แล้ว", ephemeral=True)
 
 server_on()
 
