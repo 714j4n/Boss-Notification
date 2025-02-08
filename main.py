@@ -447,7 +447,7 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
                         f"╰  {self.old_data.value} ▸ {self.new_data.value}",
             color=discord.Color.yellow(),
         )
-        embed.set_footer(text=f"ID: {user.id} , 'f')}")
+        embed.set_footer(text=f"ID: {user.id}")
 
         # ✅ ตรวจสอบการเปลี่ยนกิลด์
         if self.update_type == "guild":
