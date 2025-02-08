@@ -369,9 +369,9 @@ async def update_info_post(interaction: discord.Interaction, channel: discord.Te
     embed = discord.Embed(
         title="✿ เลือกประเภทข้อมูลที่ต้องการอัพเดทข้างล่าง.",
         description="╰ 𝐂𝐡𝐨𝐨𝐬𝐞 𝐭𝐡𝐞 𝐮𝐩𝐝𝐚𝐭𝐞 𝐭𝐲𝐩𝐞 𝐛𝐞𝐥𝐨𝐰.\n\n"
-                    "> โน้ต﹕  เลขสมาชิก และ ชื่อกิลด์ต้องกรอกให้ถูกต้อง\n"
-                    "> Note﹕Member ID and Guild Name must be correct.\n"
-                    "> ╰・ eMystic │ zMystic │ โฮ่งโฮ่ง (Woof)",
+                    "โน้ต﹕  เลขสมาชิก และ ชื่อกิลด์ต้องกรอกให้ถูกต้อง\n"
+                    "Note﹕Member ID and Guild Name must be correct.\n"
+                    "╰・ eMystic │ zMystic │ โฮ่งโฮ่ง (Woof)",
         color=discord.Color.blue(),
     )
 
@@ -420,6 +420,9 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
         if not log_channel:
             return await interaction.response.send_message("❌ ไม่พบห้อง Update Log หรือยังไม่ได้ตั้งค่า!",
                                                            ephemeral=True)
+        # ✅ กำหนดค่า user
+        user = interaction.user  # ดึงข้อมูลผู้ใช้ที่กดส่งฟอร์ม
+        avatar_url = user.avatar.url if user.avatar else user.default_avatar.url  # ใช้รูปโปรไฟล์
 
         # ✅ ตรวจสอบและดึงข้อมูล `member`
         member = interaction.guild.get_member(interaction.user.id)
@@ -431,10 +434,6 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
 
         if not member:
             return await interaction.response.send_message("❌ ไม่พบข้อมูลสมาชิก!", ephemeral=True)
-
-            # ✅ ดึงข้อมูลผู้ใช้
-            user = interaction.user  # ผู้ใช้ที่ส่งฟอร์ม
-            avatar_url = user.avatar.url if user.avatar else user.default_avatar.url  # รูปโปรไฟล์
 
         # ✅ สร้าง Embed แจ้งเตือนอัปเดต
         embed = discord.Embed(
