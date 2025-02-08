@@ -375,7 +375,105 @@ async def update_info_post(interaction: discord.Interaction, channel: discord.Te
                     "กดที่ปุ่มเพื่อดำเนินการต่อ",
         color=discord.Color.blue(),
     )
+
+    # สร้าง View พร้อมปุ่ม
+    view = UpdateInfoView()
+
+    # ส่งข้อความพร้อมปุ่มไปยังช่องที่เลือก
+    await channel.send(embed=embed, view=view)
+    await interaction.response.send_message(f"✅ โพสต์สำหรับอัพเดทข้อมูลถูกสร้างใน {channel.mention}", ephemeral=True)
+
 # ----------- สร้างโพสต์ด้วยปุ่ม -----------
+class UpdateInfoView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(UpdateButton("อัพเดทชื่อ", "name"))
+        self.add_item(UpdateButton("อัพเดทอาชีพ", "job"))
+        self.add_item(UpdateButton("อัพเดทกิลด์", "guild"))
+
+
+class UpdateButton(discord.ui.Button):
+    def __init__(self, label, update_type):
+        super().__init__(label=label, style=discord.ButtonStyle.primary)
+        self.update_type = update_type
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(UpdateModal(self.update_type))
+
+
+class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำหรับอัพเดท"):
+    def __init__(self, update_type):
+        super().__init__()
+        self.update_type = update_type
+        self.member_id = discord.ui.TextInput(label="เลขสมาชิก (5 หลัก)", required=True, max_length=5)
+        self.old_data = discord.ui.TextInput(label="ข้อมูลเดิม", required=True)
+        self.new_data = discord.ui.TextInput(label="ข้อมูลใหม่", required=True)
+        self.add_item(self.member_id)
+        self.add_item(self.old_data)
+        self.add_item(self.new_data)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        guild_id = interaction.guild_id
+        log_channel_id = update_log_channels.get(guild_id)
+
+        if not log_channel_id:
+            return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่าห้อง Update Log!", ephemeral=True)
+
+        log_channel = interaction.guild.get_channel(log_channel_id)
+        if not log_channel:
+            return await interaction.response.send_message("❌ ไม่พบห้อง Update Log ในเซิร์ฟเวอร์นี้!", ephemeral=True)
+
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member:
+            return await interaction.response.send_message("❌ ไม่พบข้อมูลสมาชิก!", ephemeral=True)
+
+        embed = discord.Embed(
+            title="📝 คำขออัพเดทข้อมูล",
+            description=f"ประเภท: {self.update_type}\n"
+                        f"เลขสมาชิก: {self.member_id.value}\n"
+                        f"ข้อมูลเดิม: {self.old_data.value}\n"
+                        f"ข้อมูลใหม่: {self.new_data.value}",
+            color=discord.Color.yellow(),
+        )
+        embed.set_footer(text="รอการยืนยันจากแอดมิน")
+
+        # ✅ ตรวจสอบการเปลี่ยนกิลด์
+        if self.update_type == "guild":
+            old_guild = self.old_data.value  # กิลด์เดิม
+            new_guild = self.new_data.value  # กิลด์ใหม่
+
+            old_role_id = guild_active_roles.get(guild_id, {}).get(old_guild)
+            new_role_id = guild_active_roles.get(guild_id, {}).get(new_guild)
+
+            if old_role_id and new_role_id:
+                old_role = interaction.guild.get_role(old_role_id)
+                new_role = interaction.guild.get_role(new_role_id)
+
+                if old_role in member.roles:
+                    await member.remove_roles(old_role)  # ลบ Role เดิม
+                if new_role:
+                    await member.add_roles(new_role)  # เพิ่ม Role ใหม่
+
+                embed.add_field(name="📌 การอัปเดตกิลด์", value=f"ลบ {old_guild} และเพิ่ม {new_guild}", inline=False)
+
+        # ✅ ตรวจสอบการเปลี่ยนชื่อ
+        elif self.update_type == "name":
+            new_nickname = f"{self.member_id.value} - {self.new_data.value}"
+            await member.edit(nick=new_nickname)
+            embed.add_field(name="📌 การอัปเดตชื่อ", value=f"เปลี่ยนชื่อเป็น {new_nickname}", inline=False)
+
+        view = AdminConfirmView(update_type=self.update_type, modal_data={
+            "member_id": self.member_id.value,
+            "old_data": self.old_data.value,
+            "new_data": self.new_data.value,
+        }, member=interaction.guild.get_member(interaction.user.id))
+        try:
+            await interaction.response.send_message("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
+        except discord.errors.InteractionResponded:
+            await interaction.followup.send("✅ คำขออัพเดทข้อมูลถูกส่งแล้ว", ephemeral=True)
+
+
+# ----------- ยืนยัน/ยกเลิกคำขอ -----------
 class AdminConfirmView(discord.ui.View):
     def __init__(self, update_type, modal_data, member):
         super().__init__(timeout=86400)  # ปุ่มมีอายุ 1 วัน
@@ -385,7 +483,6 @@ class AdminConfirmView(discord.ui.View):
         self.add_item(AdminConfirmButton("ยืนยัน", True, self.update_type, self.modal_data, self.member))
         self.add_item(AdminConfirmButton("ยกเลิก", False, self.update_type, self.modal_data, self.member))
 
-# ----------- ฟอร์มอัพเดท -----------
 class AdminConfirmButton(discord.ui.Button):
     def __init__(self, label, confirm, update_type, modal_data, member):
         style = discord.ButtonStyle.success if confirm else discord.ButtonStyle.danger
@@ -403,8 +500,7 @@ class AdminConfirmButton(discord.ui.Button):
             return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่า Role แอดมิน!", ephemeral=True)
 
         if admin_role not in [role.name for role in interaction.user.roles]:
-            return await interaction.response.send_message(f"❌ คุณไม่มีสิทธิ์กดปุ่มนี้ (ต้องมี Role: {admin_role})",
-                                                           ephemeral=True)
+            return await interaction.response.send_message(f"❌ คุณไม่มีสิทธิ์กดปุ่มนี้ (ต้องมี Role: {admin_role})", ephemeral=True)
 
         log_channel_id = update_log_channels.get(guild_id)
         log_channel = interaction.guild.get_channel(log_channel_id)
@@ -438,48 +534,6 @@ class AdminConfirmButton(discord.ui.Button):
             await interaction.message.edit(content=result_msg, embed=None, view=None)
         else:
             await interaction.message.delete()
-
-
-class UpdateModal(discord.ui.Modal, title="กรอกข้อมูลสำหรับอัพเดท"):
-    def __init__(self, update_type):
-        super().__init__()
-        self.update_type = update_type
-        self.member_id = discord.ui.TextInput(label="เลขสมาชิก (5 หลัก)", required=True, max_length=5)
-        self.old_data = discord.ui.TextInput(label="ข้อมูลเดิม", required=True)
-        self.new_data = discord.ui.TextInput(label="ข้อมูลใหม่", required=True)
-        self.add_item(self.member_id)
-        self.add_item(self.old_data)
-        self.add_item(self.new_data)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        guild_id = interaction.guild_id
-        log_channel_id = update_log_channels.get(guild_id)
-        if not log_channel_id:
-            return await interaction.response.send_message("❌ ยังไม่ได้ตั้งค่าห้อง Update Log!", ephemeral=True)
-
-        log_channel = interaction.guild.get_channel(log_channel_id)
-        if not log_channel:
-            return await interaction.response.send_message("❌ ไม่พบห้อง Update Log ในเซิร์ฟเวอร์นี้!", ephemeral=True)
-
-        member = interaction.guild.get_member(interaction.user.id)
-        if not member:
-            return await interaction.response.send_message("❌ ไม่พบข้อมูลสมาชิก!", ephemeral=True)
-
-        embed = discord.Embed(title="📝 คำขออัพเดทข้อมูล", color=discord.Color.yellow())
-        embed.add_field(name="ประเภท", value=self.update_type, inline=False)
-        embed.add_field(name="เลขสมาชิก", value=self.member_id.value, inline=False)
-        embed.add_field(name="ข้อมูลเดิม", value=self.old_data.value, inline=False)
-        embed.add_field(name="ข้อมูลใหม่", value=self.new_data.value, inline=False)
-        embed.set_footer(text="รอการยืนยันจากแอดมิน")
-
-        view = AdminConfirmView(update_type=self.update_type, modal_data={
-            "member_id": self.member_id.value,
-            "old_data": self.old_data.value,
-            "new_data": self.new_data.value,
-        }, member=member)
-
-        await log_channel.send(embed=embed, view=view)
-        await interaction.response.send_message("✅ คำขอของคุณถูกส่งไปยังแอดมินแล้ว", ephemeral=True)
 
 # ----------- ตั้งค่าช่องและ Role -----------
 update_log_channel_id = None  # เก็บ ID ห้อง update log
