@@ -7,7 +7,6 @@ import datetime
 import asyncio
 import pytz
 
-from discord import ui, Embed
 from discord.ui import Modal, Select, TextInput, View
 from myserver import server_on
 from enum import Enum
@@ -421,13 +420,6 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
         if not log_channel:
             return await interaction.response.send_message("❌ ไม่พบห้อง Update Log หรือยังไม่ได้ตั้งค่า!",
                                                            ephemeral=True)
-            # ✅ ดึงข้อมูลผู้ใช้
-            user = interaction.user  # ผู้ใช้ที่ส่งฟอร์ม
-            avatar_url = user.avatar.url if user.avatar else user.default_avatar.url  # ใช้รูปโปรไฟล์
-
-            # ✅ ดึงวันเวลาปัจจุบันเป็น Asia/Bangkok
-            now = datetime.datetime.now(local_tz)
-            formatted_date = now.strftime("%d/%m/%Y %H:%M")  # แปลงวันที่เป็น DD/MM/YYYY HH:MM
 
         # ✅ ตรวจสอบและดึงข้อมูล `member`
         member = interaction.guild.get_member(interaction.user.id)
@@ -440,18 +432,22 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
         if not member:
             return await interaction.response.send_message("❌ ไม่พบข้อมูลสมาชิก!", ephemeral=True)
 
+            # ✅ ดึงข้อมูลผู้ใช้
+            user = interaction.user  # ผู้ใช้ที่ส่งฟอร์ม
+            avatar_url = user.avatar.url if user.avatar else user.default_avatar.url  # รูปโปรไฟล์
+
         # ✅ สร้าง Embed แจ้งเตือนอัปเดต
         embed = discord.Embed(
-            color=discord.Color.yellow()
+            title="📝 𝐃𝐚𝐭𝐚 𝐮𝐩𝐝𝐚𝐭𝐞",
+            description=f"• 𝐭𝐲𝐩𝐞\n"
+                        f"╰  {self.update_type}\n"
+                        f"• 𝐦𝐞𝐦𝐛𝐞𝐫 𝐧𝐮𝐦𝐛𝐞𝐫{self.member_id.value}\n"
+                        f"╰  {self.member_id.value}\n"
+                        f"• 𝐨𝐥𝐝 𝐝𝐚𝐭𝐚 ▸ 𝐧𝐞𝐰 𝐝𝐚𝐭𝐚\n"
+                        f"╰  {self.old_data.value} ▸ {self.new_data.value}",
+            color=discord.Color.yellow(),
         )
-        embed.set_author(name=user.display_name, icon_url=avatar_url)  # ✅ รูปโปรไฟล์ + ชื่อผู้กรอก
-        embed.set_thumbnail(url=avatar_url)  # ✅ เพิ่มรูปใหญ่ของผู้กรอก
-        embed.add_field(name="• 𝐭𝐲𝐩𝐞", inline=False)
-        embed.add_field(name="╰  {self.update_type}", inline=False)
-        embed.add_field(name="• 𝐦𝐞𝐦𝐛𝐞𝐫 𝐧𝐮𝐦𝐛𝐞𝐫 ﹕{self.member_id.value}", inline=False)
-        embed.add_field(name="• 𝐨𝐥𝐝 𝐝𝐚𝐭𝐚 ▸ 𝐧𝐞𝐰 𝐝𝐚𝐭𝐚", inline=False)
-        embed.add_field(name="╰  {self.old_data.value} ▸ {self.new_data.value}", inline=False)
-        embed.set_footer(text=f"ID: {user.id} • 𝐃𝐚𝐭𝐞 : {formatted_date}")
+        embed.set_footer(text=f"ID: {user.id} , 'f')}")
 
         # ✅ ตรวจสอบการเปลี่ยนกิลด์
         if self.update_type == "guild":
