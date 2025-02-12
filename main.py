@@ -221,7 +221,7 @@ async def setroom(interaction: discord.Interaction, room_type: app_commands.Choi
 @bot.tree.command(name="setrole", description="ตั้งค่า Role สำหรับบอท เช่น Role บอส, แอดมิน และกิลด์")
 @app_commands.choices(
     role_type=[
-        app_commands.Choice(name="Role แจ้งเตือนบอส", value="boss_role"),
+        app_commands.Choice(name="Role แจ้งเตือนบอส", value="boss_roles"),
         app_commands.Choice(name="Role แอดมิน", value="admin_role"),
         app_commands.Choice(name="Role ของกิลด์", value="guild_role"),
     ],
@@ -244,7 +244,7 @@ async def setrole(
     # ---------------------- ดูการตั้งค่า ----------------------
     if action.value == "view":
         role_dict = {
-            "boss_role": boss_roles,
+            "boss_roles": boss_roles,
             "admin_role": admin_roles,
             "guild_role": guild_active_roles
         }
@@ -271,7 +271,7 @@ async def setrole(
             guild_active_roles[guild_id][guild_name] = role.id
         else:
             role_dict = {
-                "boss_role": boss_roles,
+                "boss_roles": boss_roles,
                 "admin_role": admin_roles
             }
             role_dict[role_type.value][guild_id] = role.id
@@ -287,7 +287,7 @@ async def setrole(
                 return await interaction.response.send_message("❌ ไม่พบ Role กิลด์ที่ต้องการแก้ไข", ephemeral=True)
         else:
             role_dict = {
-                "boss_role": boss_roles,
+                "boss_roles": boss_roles,
                 "admin_role": admin_roles
             }
             role_dict[role_type.value][guild_id] = role.id
@@ -304,7 +304,7 @@ async def setrole(
                 await interaction.response.send_message("❌ ไม่พบ Role กิลด์ที่ต้องการลบ", ephemeral=True)
         else:
             role_dict = {
-                "boss_role": boss_roles,
+                "boss_roles": boss_roles,
                 "admin_role": admin_roles
             }
             if guild_id in role_dict[role_type.value]:
