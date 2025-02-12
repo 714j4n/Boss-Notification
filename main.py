@@ -113,6 +113,7 @@ update_log_channel_id = None  # Initially unset
 async def setroom(interaction: discord.Interaction, room_type: app_commands.Choice[str],
                   action: app_commands.Choice[str], channel: discord.TextChannel = None):
     guild_id = interaction.guild_id
+    await interaction.response.defer(thinking=True)  # ✅ ป้องกัน timeout
 
     # คำสั่งดูห้องที่ตั้งค่า
     if action.value == "view":
@@ -126,14 +127,14 @@ async def setroom(interaction: discord.Interaction, room_type: app_commands.Choi
         if room_id:
             room = bot.get_channel(room_id)
             room_mention = room.mention if room else f"❌ ห้องไม่พบ (ID: {room_id})"
-            await interaction.response.send_message(f"🔹 ห้องที่ตั้งค่าอยู่: {room_mention}", ephemeral=True)
+            await interaction.followup.send(f"🔹 ห้องที่ตั้งค่าอยู่: {room_mention}", ephemeral=True)  # ✅ เปลี่ยนเป็น followup
         else:
-            await interaction.response.send_message(f"❌ ยังไม่มีการตั้งค่าห้อง {room_type.name}", ephemeral=True)
+            await interaction.followup.send(f"❌ ยังไม่มีการตั้งค่าห้อง {room_type.name}", ephemeral=True)  # ✅ followup
         return
 
     # ต้องระบุห้องเมื่อใช้ set/edit/remove
     if not channel and action.value in ["set", "edit", "remove"]:
-        return await interaction.response.send_message("❌ โปรดระบุห้องที่ต้องการตั้งค่า", ephemeral=True)
+        return await interaction.followup.send("❌ โปรดระบุห้องที่ต้องการตั้งค่า", ephemeral=True)  # ✅ followup
 
     # ตั้งค่าห้อง
     if action.value == "set":
@@ -149,14 +150,12 @@ async def setroom(interaction: discord.Interaction, room_type: app_commands.Choi
             }
             room_dict[room_type.value][guild_id] = channel.id
 
-        await interaction.response.send_message(
-            f"✅ ตั้งค่าห้อง {channel.mention} สำหรับ {room_type.name} เรียบร้อยแล้ว!", ephemeral=True)
+        await interaction.followup.send(f"✅ ตั้งค่าห้อง {channel.mention} สำหรับ {room_type.name} เรียบร้อยแล้ว!", ephemeral=True)  # ✅ followup
 
     # แก้ไขห้อง (เหมือนกับ set)
     elif action.value == "edit":
         if room_type.value == "broadcast":
-            return await interaction.response.send_message(
-                "❌ ไม่สามารถแก้ไขห้องบอร์ดแคสต์ได้ โปรดใช้ `remove` แล้ว `set` ใหม่", ephemeral=True)
+            return await interaction.followup.send("❌ ไม่สามารถแก้ไขห้องบอร์ดแคสต์ได้ โปรดใช้ `remove` แล้ว `set` ใหม่", ephemeral=True)  # ✅ followup
 
         room_dict = {
             "boss_channel": boss_channels,
@@ -165,18 +164,16 @@ async def setroom(interaction: discord.Interaction, room_type: app_commands.Choi
         }
         room_dict[room_type.value][guild_id] = channel.id
 
-        await interaction.response.send_message(
-            f"✅ เปลี่ยนห้องเป็น {channel.mention} สำหรับ {room_type.name} เรียบร้อยแล้ว!", ephemeral=True)
+        await interaction.followup.send(f"✅ เปลี่ยนห้องเป็น {channel.mention} สำหรับ {room_type.name} เรียบร้อยแล้ว!", ephemeral=True)  # ✅ followup
 
     # ลบห้องออกจากระบบ
     elif action.value == "remove":
         if room_type.value == "broadcast":
             if guild_id in broadcast_channels and channel.id in broadcast_channels[guild_id]:
                 broadcast_channels[guild_id].remove(channel.id)
-                await interaction.response.send_message(f"✅ ลบห้อง {channel.mention} ออกจากบอร์ดแคสต์แล้ว!",
-                                                        ephemeral=True)
+                await interaction.followup.send(f"✅ ลบห้อง {channel.mention} ออกจากบอร์ดแคสต์แล้ว!", ephemeral=True)  # ✅ followup
             else:
-                await interaction.response.send_message(f"❌ ไม่พบห้อง {channel.mention} ในบอร์ดแคสต์!", ephemeral=True)
+                await interaction.followup.send(f"❌ ไม่พบห้อง {channel.mention} ในบอร์ดแคสต์!", ephemeral=True)  # ✅ followup
         else:
             room_dict = {
                 "boss_channel": boss_channels,
@@ -185,11 +182,10 @@ async def setroom(interaction: discord.Interaction, room_type: app_commands.Choi
             }
             if guild_id in room_dict[room_type.value]:
                 del room_dict[room_type.value][guild_id]
-                await interaction.response.send_message(f"✅ ลบการตั้งค่าห้อง {room_type.name} เรียบร้อยแล้ว!",
-                                                        ephemeral=True)
+                await interaction.followup.send(f"✅ ลบการตั้งค่าห้อง {room_type.name} เรียบร้อยแล้ว!", ephemeral=True)  # ✅ followup
             else:
-                await interaction.response.send_message(f"❌ ยังไม่มีห้อง {room_type.name} ที่ตั้งค่าไว้",
-                                                        ephemeral=True)
+                await interaction.followup.send(f"❌ ยังไม่มีห้อง {room_type.name} ที่ตั้งค่าไว้", ephemeral=True)  # ✅ followup
+
 #----------- setrole -----------
 @bot.tree.command(name="setrole", description="ตั้งค่า Role สำหรับบอท เช่น Role บอส, แอดมิน และกิลด์")
 @app_commands.choices(
