@@ -221,7 +221,7 @@ async def setroom(interaction: discord.Interaction, room_type: app_commands.Choi
 @bot.tree.command(name="setrole", description="ตั้งค่า Role สำหรับบอท เช่น Role บอส, แอดมิน และกิลด์")
 @app_commands.choices(
     role_type=[
-        app_commands.Choice(name="Role แจ้งเตือนบอส", value="boss_roles"),
+        app_commands.Choice(name="Role แจ้งเตือนบอส", value="boss_role"),
         app_commands.Choice(name="Role แอดมิน", value="admin_role"),
         app_commands.Choice(name="Role ของกิลด์", value="guild_role"),
     ],
@@ -244,7 +244,7 @@ async def setrole(
     # ---------------------- ดูการตั้งค่า ----------------------
     if action.value == "view":
         role_dict = {
-            "boss_roles": boss_roles,
+            "boss_role": boss_roles,
             "admin_role": admin_roles,
             "guild_role": guild_active_roles
         }
@@ -271,7 +271,7 @@ async def setrole(
             guild_active_roles[guild_id][guild_name] = role.id
         else:
             role_dict = {
-                "boss_roles": boss_roles,
+                "boss_role": boss_roles,
                 "admin_role": admin_roles
             }
             role_dict[role_type.value][guild_id] = role.id
@@ -287,7 +287,7 @@ async def setrole(
                 return await interaction.response.send_message("❌ ไม่พบ Role กิลด์ที่ต้องการแก้ไข", ephemeral=True)
         else:
             role_dict = {
-                "boss_roles": boss_roles,
+                "boss_role": boss_roles,
                 "admin_role": admin_roles
             }
             role_dict[role_type.value][guild_id] = role.id
@@ -304,7 +304,7 @@ async def setrole(
                 await interaction.response.send_message("❌ ไม่พบ Role กิลด์ที่ต้องการลบ", ephemeral=True)
         else:
             role_dict = {
-                "boss_roles": boss_roles,
+                "boss_role": boss_roles,
                 "admin_role": admin_roles
             }
             if guild_id in role_dict[role_type.value]:
@@ -341,12 +341,12 @@ async def boss(
 
     # ---------------------- คำสั่งแจ้งเตือนบอส ----------------------
     if boss_action.value == "notification" and not sub_action:
-        print(f"[DEBUG] คำสั่ง /boss notification ถูกเรียกใช้งาน - {boss_name}")
+        await interaction.response.defer(thinking=True)  # แจ้ง Discord ว่าบอทกำลังประมวลผล
 
         now = datetime.datetime.now(local_tz)
-        spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)  # ✅ คำนวณ spawn_time
-        role = boss_roles.get(guild_id)  # ✅ ดึง Role ที่ต้องใช้สำหรับการแจ้งเตือน
+        spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)  # คำนวณ spawn_time
 
+        # ตรวจสอบ dictionary เพื่อป้องกัน KeyError
         if guild_id not in boss_notifications:
             boss_notifications[guild_id] = []
 
@@ -356,10 +356,14 @@ async def boss(
             "owner": owner.value
         })
 
-        # ✅ เรียก schedule_boss_notifications() เพื่อให้ระบบแจ้งเตือนทำงาน
-        await schedule_boss_notifications(guild_id, boss_name.name, spawn_time, owner.value, role)
+        role = boss_roles.get(guild_id)
+        role_mention = f"<@&{role}>" if role else "@everyone"
 
-        await interaction.response.send_message(f"✅ ตั้งค่าแจ้งเตือนบอส {boss_name.value} แล้ว!", ephemeral=True)
+        await interaction.followup.send(f"✅ ตั้งค่าแจ้งเตือนบอส {boss_name.value} เวลา {hours} ชั่วโมง {minutes} นาที!",
+                                        ephemeral=True)
+
+        # ใช้ asyncio.create_task() เพื่อไม่ให้บอทค้าง
+        asyncio.create_task(schedule_boss_notifications(guild_id, boss_name.name, spawn_time, owner.value, role))
 
         # 1️⃣ ดูรายการแจ้งเตือนบอส (⚡ พร้อมปุ่ม "📢 ประกาศ")
         if sub_action and sub_action.value == "list":
