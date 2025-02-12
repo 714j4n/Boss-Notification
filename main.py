@@ -33,79 +33,119 @@ async def on_ready():
         print(f"❌ Error syncing commands: {e}")
 # -------------------------------------------------------
 # ----------------------------- setroom start -----------------------------
-@bot.tree.command(name='setroom', description='ตั้งค่าห้องต่างๆ รวมถึงบอร์ดแคสต์, บอส, และอัพเดตล็อก')
+class SetRoomAction(Enum):
+    ADD = "add"
+    REMOVE = "remove"
+    SET = "set"
+
+class SetRoomOption(Enum):
+    BROADCAST = "broadcast"
+    NOTIFICATIONS = "notifications"
+    BOSS = "boss"
+    UPDATELOG = "updatelog"
+
+@bot.tree.command(name='setroom', description='ตั้งค่าห้องต่างๆ เช่น บอร์ดแคสต์, แจ้งเตือนบอส และอัปเดตล็อก')
 async def setroom(
         interaction: discord.Interaction,
-        action: str,  # add, remove, set_boss_channel, set_update_log_channel
+        action: SetRoomAction,  # add, remove, set
+        option: SetRoomOption,  # broadcast, notifications, boss, updatelog
         channel: discord.TextChannel
-):
-    await interaction.response.defer(ephemeral=True)  # ใช้ defer เพื่อลดดีเลย์
-    guild_id = interaction.guild_id
-
-    if action == "add":  # เพิ่มห้องบอร์ดแคสต์
-        if guild_id not in broadcast_channels:
-            broadcast_channels[guild_id] = []
-        if channel.id not in broadcast_channels[guild_id]:
-            broadcast_channels[guild_id].append(channel.id)
-            await interaction.followup.send(f"✅ เพิ่มห้อง {channel.mention} เข้าสู่รายการบอร์ดแคสต์แล้ว!",
-                                            ephemeral=True)
-        else:
-            await interaction.followup.send(f"⚠ ห้อง {channel.mention} มีอยู่ในรายการบอร์ดแคสต์อยู่แล้ว",
-                                            ephemeral=True)
-
-    elif action == "remove":  # ลบห้องบอร์ดแคสต์
-        if guild_id in broadcast_channels and channel.id in broadcast_channels[guild_id]:
-            broadcast_channels[guild_id].remove(channel.id)
-            await interaction.followup.send(f"✅ ลบห้อง {channel.mention} ออกจากรายการบอร์ดแคสต์แล้ว", ephemeral=True)
-        else:
-            await interaction.followup.send(f"⚠ ไม่พบห้อง {channel.mention} ในรายการบอร์ดแคสต์", ephemeral=True)
-
-    elif action == "set_boss_channel":  # ตั้งค่าห้องแจ้งเตือนบอส
-        boss_channels[guild_id] = channel.id
-        await interaction.followup.send(f"✅ ตั้งค่าช่อง {channel.mention} เป็นช่องแจ้งเตือนบอสเรียบร้อยแล้ว!",
-                                        ephemeral=True)
-
-    elif action == "set_update_log_channel":  # ตั้งค่าห้องอัพเดตล็อก
-        update_log_channels[guild_id] = channel.id
-        await interaction.followup.send(f"✅ ตั้งค่าห้อง update log เป็น {channel.mention} เรียบร้อย", ephemeral=True)
-
-    else:
-        await interaction.followup.send(
-            "⚠ คำสั่งไม่ถูกต้อง! กรุณาใช้: add, remove, set_boss_channel, หรือ set_update_log_channel", ephemeral=True)
-# ----------------------------- setroom end -----------------------------
-# ----------------------------- setrole start -----------------------------
-@bot.tree.command(name='setrole', description='ตั้งค่า Role สำหรับเซิร์ฟเวอร์')
-async def setrole(
-        interaction: discord.Interaction,
-        action: str,  # add, remove
-        role: discord.Role = None,  # ใช้กับ add
-        guild_name: str = None  # ใช้กับ set_guild_active และ remove_guild_active
 ):
     await interaction.response.defer(ephemeral=True)
     guild_id = interaction.guild_id
 
-    if action == "add":
-        if role is None:
-            await interaction.followup.send("⚠ โปรดระบุ Role ที่ต้องการตั้งค่า", ephemeral=True)
-            return
+    if action == SetRoomAction.ADD:
+        if option == SetRoomOption.BROADCAST:  # เพิ่มห้องบอร์ดแคสต์
+            if guild_id not in broadcast_channels:
+                broadcast_channels[guild_id] = []
+            if channel.id not in broadcast_channels[guild_id]:
+                broadcast_channels[guild_id].append(channel.id)
+                await interaction.followup.send(f"✅ เพิ่มห้อง {channel.mention} เข้าสู่รายการบอร์ดแคสต์แล้ว!", ephemeral=True)
+            else:
+                await interaction.followup.send(f"⚠ ห้อง {channel.mention} มีอยู่ในรายการบอร์ดแคสต์อยู่แล้ว", ephemeral=True)
 
-        if guild_name:  # ตั้งค่า Role สำหรับกิลด์ที่ใช้งาน
+    elif action == SetRoomAction.REMOVE:
+        if option == SetRoomOption.NOTIFICATIONS:  # ลบห้องออกจากบอร์ดแคสต์
+            if guild_id in broadcast_channels and channel.id in broadcast_channels[guild_id]:
+                broadcast_channels[guild_id].remove(channel.id)
+                await interaction.followup.send(f"✅ ลบห้อง {channel.mention} ออกจากรายการบอร์ดแคสต์แล้ว", ephemeral=True)
+            else:
+                await interaction.followup.send(f"⚠ ไม่พบห้อง {channel.mention} ในรายการบอร์ดแคสต์", ephemeral=True)
+
+    elif action == SetRoomAction.SET:
+        if option == SetRoomOption.BOSS:  # ตั้งค่าช่องแจ้งเตือนบอส
+            boss_channels[guild_id] = channel.id
+            await interaction.followup.send(f"✅ ตั้งค่าช่อง {channel.mention} เป็นช่องแจ้งเตือนบอสเรียบร้อยแล้ว!", ephemeral=True)
+
+        elif option == SetRoomOption.UPDATELOG:  # ตั้งค่าห้องอัปเดตล็อก
+            update_log_channels[guild_id] = channel.id
+            await interaction.followup.send(f"✅ ตั้งค่าห้อง update log เป็น {channel.mention} เรียบร้อย", ephemeral=True)
+
+    else:
+        await interaction.followup.send("⚠ คำสั่งไม่ถูกต้อง! โปรดเลือก action และ option ให้ถูกต้อง", ephemeral=True)
+# ----------------------------- setroom end -----------------------------
+# ----------------------------- setrole start -----------------------------
+class SetRoleAction(Enum):
+    ADD = "add"
+    REMOVE = "remove"
+
+class SetRoleOption(Enum):
+    GUILD = "guild"
+    ADMIN = "admin"
+    BOSS = "boss"
+
+@bot.tree.command(name='setrole', description='ตั้งค่า Role สำหรับเซิร์ฟเวอร์')
+async def setrole(
+        interaction: discord.Interaction,
+        action: SetRoleAction,  # add, remove
+        option: SetRoleOption,  # guild, admin, boss
+        role: discord.Role = None,  # ใช้กับ add
+        guild_name: str = None  # ใช้กับ guild option
+):
+    await interaction.response.defer(ephemeral=True)
+    guild_id = interaction.guild_id
+
+    if action == SetRoleAction.ADD:
+        if option == SetRoleOption.GUILD:
+            if not guild_name or not role:
+                return await interaction.followup.send("⚠ โปรดระบุกิลด์และ Role ที่ต้องการตั้งค่า!", ephemeral=True)
             if guild_id not in guild_active_roles:
                 guild_active_roles[guild_id] = {}
             guild_active_roles[guild_id][guild_name] = role.id
-            await interaction.followup.send(f"✅ ตั้งค่า Role **{role.name}** สำหรับกิลด์ **{guild_name}** แล้ว!",
-                                            ephemeral=True)
-        else:  # ตั้งค่า Role ทั่วไป
-            boss_roles[guild_id] = role.id
-            admin_roles[guild_id] = role.name
-            await interaction.followup.send(f"✅ ตั้งค่า Role **{role.mention}** เรียบร้อยแล้ว!", ephemeral=True)
+            await interaction.followup.send(f"✅ ตั้งค่า Role **{role.name}** สำหรับกิลด์ **{guild_name}** แล้ว!", ephemeral=True)
 
-    elif action == "remove":  # ลบกิลด์ที่ใช้งาน
-        if guild_name and guild_id in guild_active_roles and guild_name in guild_active_roles[guild_id]:
+        elif option == SetRoleOption.ADMIN:
+            if not role:
+                return await interaction.followup.send("⚠ โปรดระบุ Role ที่ต้องการตั้งเป็นแอดมิน!", ephemeral=True)
+            admin_roles[guild_id] = role.name
+            await interaction.followup.send(f"✅ ตั้งค่า Role แอดมินเป็น **{role.name}** แล้ว!", ephemeral=True)
+
+        elif option == SetRoleOption.BOSS:
+            if not role:
+                return await interaction.followup.send("⚠ โปรดระบุ Role ที่ต้องการตั้งสำหรับแจ้งเตือนบอส!", ephemeral=True)
+            boss_roles[guild_id] = role.id
+            await interaction.followup.send(f"✅ ตั้งค่า Role สำหรับแจ้งเตือนบอสเป็น **{role.name}** แล้ว!", ephemeral=True)
+
+    elif action == SetRoleAction.REMOVE:
+        if option == SetRoleOption.GUILD:
+            if not guild_name or guild_id not in guild_active_roles or guild_name not in guild_active_roles[guild_id]:
+                return await interaction.followup.send("❌ ไม่พบกิลด์ที่ต้องการลบ!", ephemeral=True)
             del guild_active_roles[guild_id][guild_name]
-            await interaction.followup.send(f"✅ ลบกิลด์ที่ไม่ใช้งานออกแล้ว: {guild_name}", ephemeral=True)
-        else:
-            await interaction.followup.send("❌ ไม่มีกิลด์ที่ต้องการลบ.", ephemeral=True)
+            await interaction.followup.send(f"✅ ลบ Role ที่ผูกกับกิลด์ **{guild_name}** เรียบร้อย!", ephemeral=True)
+
+        elif option == SetRoleOption.ADMIN:
+            if guild_id in admin_roles:
+                del admin_roles[guild_id]
+                await interaction.followup.send(f"✅ ลบ Role แอดมินออกจากระบบแล้ว!", ephemeral=True)
+            else:
+                await interaction.followup.send(f"❌ ยังไม่มี Role แอดมินที่ถูกตั้งค่า!", ephemeral=True)
+
+        elif option == SetRoleOption.BOSS:
+            if guild_id in boss_roles:
+                del boss_roles[guild_id]
+                await interaction.followup.send(f"✅ ลบ Role สำหรับแจ้งเตือนบอสออกจากระบบแล้ว!", ephemeral=True)
+            else:
+                await interaction.followup.send(f"❌ ยังไม่มี Role บอสที่ถูกตั้งค่า!", ephemeral=True)
 
     else:
         await interaction.followup.send("⚠ คำสั่งไม่ถูกต้อง! กรุณาใช้: add หรือ remove", ephemeral=True)
@@ -192,16 +232,64 @@ async def boss(
         await interaction.followup.send(f"✅ ตั้งค่าแจ้งเตือนบอส {boss_name.value} เรียบร้อย!", ephemeral=True)
         await schedule_boss_notifications(guild_id, boss_name.name, spawn_time, owner.value, role)
 
+
     elif action == BossAction.LIST:
+
         if guild_id not in boss_notifications or not boss_notifications[guild_id]:
             return await interaction.followup.send("❌ ไม่มีบอสที่ถูกตั้งค่าแจ้งเตือน", ephemeral=True)
+
+        now = datetime.datetime.now(local_tz)
+
+        # กรองรายการบอสที่ยังไม่เกิด
+        valid_notifications = [
+            notif for notif in boss_notifications[guild_id]
+            if notif["spawn_time"] > now
+        ]
+
+        if not valid_notifications:
+            return await interaction.followup.send("❌ ไม่มีบอสที่ถูกตั้งค่าแจ้งเตือน", ephemeral=True)
+
+        sorted_notifications = sorted(valid_notifications, key=lambda x: x["spawn_time"])
+
         embed = discord.Embed(title="📜 𝐁𝐨𝐬𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐢𝐬𝐭", color=discord.Color.blue())
-        for notif in boss_notifications[guild_id]:
+
+        for idx, notif in enumerate(sorted_notifications[:10], start=1):  # จำกัดสูงสุด 10 รายการ
             boss_name = notif["boss_name"].replace("_", " ")
             spawn_time = notif["spawn_time"].astimezone(local_tz).strftime("%H:%M")
             owner = notif["owner"]
-            embed.add_field(name=f"𝐁𝐨𝐬𝐬: {boss_name} (𝐎𝐰𝐧𝐞𝐫: {owner})", value=f"𝐒𝐩𝐚𝐰𝐧: {spawn_time}", inline=False)
+            embed.add_field(name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{boss_name} 𝐎𝐰𝐧𝐞𝐫 ﹕{owner}",
+                            value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{spawn_time}",
+                            inline=False)
         await interaction.followup.send(embed=embed, ephemeral=True)
+
+        # ✅ ปุ่ม "ประกาศ"
+        class ConfirmView(discord.ui.View):
+            def __init__(self, embed):
+                super().__init__(timeout=60)
+                self.embed = embed  # ✅ เก็บ Embed ไว้ใช้ในปุ่ม
+
+            @discord.ui.button(label="📢 ประกาศ", style=discord.ButtonStyle.green)
+            async def announce(self, interaction: discord.Interaction, button: discord.ui.Button):
+                await interaction.response.defer()
+
+                guild_id = interaction.guild_id
+                channel_id = boss_channels.get(guild_id)
+
+                if not channel_id:
+                    return await interaction.followup.send("❌ ยังไม่ได้ตั้งค่าช่องแจ้งเตือนบอส!", ephemeral=True)
+
+                channel = interaction.guild.get_channel(channel_id)
+                if not channel:
+                    return await interaction.followup.send("❌ ไม่พบช่องแจ้งเตือน!", ephemeral=True)
+
+                # ✅ ดึง Role ที่ต้องแท็ก
+                role_id = boss_roles.get(guild_id)
+                role_mention = f"<@&{role_id}>" if role_id else "@everyone"
+
+                await channel.send(f"📢 **【𝐓𝐢𝐦𝐞 𝐢𝐧 𝐠𝐚𝐦𝐞 + 𝟏𝐡𝐫】** {role_mention}", embed=self.embed)
+                await interaction.followup.send("✅ ประกาศไปที่ห้องแจ้งเตือนเรียบร้อย!", ephemeral=True)
+
+        await interaction.followup.send(embed=embed, ephemeral=True, view=ConfirmView(embed))  # ✅ ส่ง Embed ไปพร้อมปุ่ม
 
     elif action == BossAction.REMOVE_NOTIFICATION:
         if guild_id in boss_notifications and boss_name:
