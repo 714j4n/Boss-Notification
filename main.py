@@ -654,6 +654,36 @@ async def add_bp(interaction: discord.Interaction, member: discord.Member, point
     user_scores[guild_id][member.id] += points
     await interaction.response.send_message(f'✅ เพิ่ม {points} BP ให้ {member.mention} แล้ว!', ephemeral=True)
 
+
+@bot.event
+async def on_reaction_add(reaction, user):
+    if user.bot:
+        return  # ข้ามบอท
+
+    message = reaction.message
+    guild_id = message.guild.id
+    if guild_id not in active_rooms or message.channel.id != active_rooms[guild_id]:
+        return  # ไม่ใช่ห้องที่กำหนด
+
+    if guild_id not in admin_roles:
+        return  # ถ้ายังไม่มี Role แอดมินที่ตั้งค่าไว้ ไม่ให้ทำงาน
+
+    if not is_admin(user):
+        return  # เฉพาะแอดมินเท่านั้น
+
+    emoji = str(reaction.emoji)
+    if emoji not in emoji_bp.get(guild_id, {}):
+        return  # ไม่ใช่อิโมจิที่กำหนดไว้
+
+    points = emoji_bp[guild_id][emoji]
+    user_id = message.author.id
+    if guild_id not in user_scores:
+        user_scores[guild_id] = {}
+    if user_id not in user_scores[guild_id]:
+        user_scores[guild_id][user_id] = 0
+
+    user_scores[guild_id][user_id] += points
+
 server_on()
 
 # เริ่มรันบอท
