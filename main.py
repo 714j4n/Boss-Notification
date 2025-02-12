@@ -2,11 +2,12 @@ import os
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import View, Button, Modal, Select, TextInput
+from discord.ui import View, Button
 import datetime
 import asyncio
 import pytz
 
+from discord.ui import Modal, Select, TextInput, View
 from myserver import server_on
 from enum import Enum
 
@@ -16,16 +17,12 @@ local_tz = pytz.timezone('Asia/Bangkok')  # ใช้เวลาประเท
 # ตัวแปรเก็บข้อมูลบอสแจ้งเตือน + เก็บค่าที่ตั้งค่าไว้สำหรับหลายเซิร์ฟเวอร์
 boss_notifications = {}  # {guild_id: [{"boss_name": "..", "spawn_time": datetime, "owner": ".."}]} ✅
 boss_roles = {}  # {guild_id: role_id}  # สำหรับแท็ก Role ที่ต้องการตอนกดประกาศ ✅
+admin_roles = {}  # {guild_id: role_name}
 update_log_channels = {}  # {guild_id: channel_id}
 guild_active_roles = {}  # {guild_id: {guild_name: role_id}}
-broadcast_channels = {}  # ✅
+broadcast_channels = {} # ✅
 boss_channels = {}  # เก็บค่า channel_id ของแต่ละเซิร์ฟเวอร์ ✅
-role_notifications = {}  # เก็บข้อมูล role ที่ใช้แท็กตอนแจ้งเตือนบอส ✅
-# Dictionary เก็บค่าห้องที่บอททำงานและคะแนนอิโมจิ
-active_rooms = {}  # {guild_id: channel_id}
-emoji_bp = {}  # {guild_id: {emoji: point}}
-user_scores = {}  # {guild_id: {user_id: score}}
-admin_roles = {}  # {guild_id: role_name}
+role_notifications = {} # เก็บข้อมูล role ที่ใช้แท็กตอนแจ้งเตือนบอส ✅
 
 # -------------------------------------------------------
 @bot.event
@@ -36,8 +33,6 @@ async def on_ready():
         print(f"✅ Synced {len(synced)} commands")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
-
-
 # -------------------------------------------------------
 
 # ----------- ดูที่ตั้งค่าของเซิร์ฟเวอร์ *มีอัพเดท* ✅-----------
@@ -46,27 +41,25 @@ async def view_setting(interaction: discord.Interaction):
     guild_id = interaction.guild_id
     role_id = boss_roles.get(guild_id)
 
-    role_display = f"<@&{role_id}>" if role_id else "❌ ยังไม่ได้ตั้งค่า"  # ✅
-    boss_channel_id = boss_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า")  # ✅
-    broadcast_channel_id = broadcast_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า")  # ✅
+    role_display = f"<@&{role_id}>" if role_id else "❌ ยังไม่ได้ตั้งค่า" # ✅
+    boss_channel_id = boss_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า") # ✅
+    broadcast_channel_id = broadcast_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า") # ✅
     admin_role_name = admin_roles.get(guild_id, "❌ ยังไม่ได้ตั้งค่า")
     update_log_channel_id = update_log_channels.get(guild_id)
     update_log_channel_display = f"<#{update_log_channel_id}>" if update_log_channel_id else "❌ ยังไม่ได้ตั้งค่า"
     active_guilds = guild_active_roles.get(guild_id, {})
-    active_guilds_display = "\n".join(
-        [f"🔹 {name}: <@&{rid}>" for name, rid in active_guilds.items()]) if active_guilds else "❌ ยังไม่ได้ตั้งค่า"
+    active_guilds_display = "\n".join([f"🔹 {name}: <@&{rid}>" for name, rid in active_guilds.items()]) if active_guilds else "❌ ยังไม่ได้ตั้งค่า"
 
     embed = discord.Embed(title="🔧 การตั้งค่าของเซิร์ฟเวอร์", color=discord.Color.blue())
-    embed.add_field(name="🔔 Role Notification", value=role_display, inline=False)  # ✅
-    embed.add_field(name="📢 Boss Notification Channel", value=f"<#{boss_channel_id}>", inline=False)  # ✅
-    embed.add_field(name="📡 Broadcast Channel", value=f"[{broadcast_channel_id}]", inline=False)  # ✅
+    embed.add_field(name="🔔 Role Notification", value=role_display, inline=False) # ✅
+    embed.add_field(name="📢 Boss Notification Channel", value=f"<#{boss_channel_id}>", inline=False) # ✅
+    embed.add_field(name="📡 Broadcast Channel", value=f"[{broadcast_channel_id}]", inline=False) # ✅
     embed.add_field(name="🛠️ Admin Role", value=admin_role_name, inline=False)
     embed.add_field(name="📝 Update Log Channel", value=update_log_channel_display, inline=False)
     embed.add_field(name="🏰 Active Guilds", value=active_guilds_display, inline=False)
 
     await interaction.response.send_message(embed=embed, ephemeral=True)
     print(f"[DEBUG] view_setting for guild {guild_id}")
-
 
 # ----------- กำหนดบอสเป็น Enum ✅-----------
 class BossName(Enum):
@@ -87,7 +80,6 @@ class BossName(Enum):
             if boss.value == value:
                 return boss
         return None
-
 
 # ----------- สำหรับเพิ่มห้องเพื่อบอร์ดแคสต์ ✅-----------
 @bot.tree.command(name='add_channel', description='เพิ่มห้องบอร์ดแคสต์')
@@ -124,6 +116,7 @@ async def remove_channel(interaction: discord.Interaction, channel: discord.Text
     date="วันที่ (เช่น 25/10/24)",
     time="เวลาบอสเกิด (เช่น 18:00)"
 )
+
 async def pattern_broadcast(interaction: discord.Interaction, boss_name: BossName, date: str, time: str):
     await interaction.response.defer(ephemeral=True)  # เพิ่มการ defer
 
@@ -139,7 +132,6 @@ async def pattern_broadcast(interaction: discord.Interaction, boss_name: BossNam
         await interaction.followup.send("บอร์ดแคสต์ข้อความตามแพทเทิร์นเรียบร้อยแล้ว!", ephemeral=True)
     else:
         await interaction.followup.send("ยังไม่มีห้องที่ตั้งค่าให้บอร์ดแคสต์", ephemeral=True)
-
 
 # ----------- ปุ่มยืนยัน/ยกเลิกสำหรับ set_boss_channel -----------
 class ConfirmView(View):
@@ -161,7 +153,6 @@ class ConfirmView(View):
         await self.interaction.followup.send("ยกเลิกการตั้งค่าช่องแจ้งเตือนบอส", ephemeral=True)
         self.stop()
 
-
 # ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส ✅ -----------
 @bot.tree.command(name='set_boss_channel', description='ตั้งค่าช่องสำหรับแจ้งเตือนบอส')
 async def set_boss_channel(interaction: discord.Interaction, channel: discord.TextChannel):
@@ -171,7 +162,6 @@ async def set_boss_channel(interaction: discord.Interaction, channel: discord.Te
     await interaction.response.send_message(
         f"✅ ตั้งค่าช่อง {channel.mention} เป็นช่องแจ้งเตือนบอสเรียบร้อยแล้ว!", ephemeral=True
     )
-
 
 # ----------- ตั้งค่า Role ที่ต้องการให้บอทแท็กในการแจ้งเตือนบอส ✅-----------
 @bot.tree.command(name="set_role_notification", description="ตั้งค่า Role สำหรับแจ้งเตือนบอส")
@@ -186,12 +176,10 @@ async def set_role_notification(interaction: discord.Interaction, role: discord.
 
     print(f"[DEBUG] boss_roles: {boss_roles}")
 
-
 # ----------- คำสั่งแจ้งเตือนเวลาบอส ✅-----------
 class OwnerType(Enum):
     KNIGHT = "knight"
     BISHOP = "bishop"
-
 
 @tree.command(name='boss_set_notification', description='ตั้งค่าแจ้งเตือนบอส')
 async def boss_set_notification(
@@ -234,9 +222,9 @@ async def boss_set_notification(
 
     await schedule_boss_notifications(guild_id, boss_name.name, spawn_time, owner.value, role)
 
-
 # ----------- ระบบแจ้งเตือนเวลาบอส ✅-----------
 async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, role):
+
     now = datetime.datetime.now(local_tz)
 
     # กรองรายการบอสที่ยังไม่เกิด
@@ -253,7 +241,7 @@ async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, ro
 
     print(f"[DEBUG] Scheduling boss: {boss_name} at {spawn_time} (in {time_until_spawn}s)")
 
-    if time_before_five_min > 0:  # รอ 5 นาทีก่อนบอสเกิด
+    if time_before_five_min > 0: # รอ 5 นาทีก่อนบอสเกิด
         await asyncio.sleep(time_before_five_min)
 
     if guild_id in boss_channels:
@@ -279,9 +267,7 @@ async def schedule_boss_notifications(guild_id, boss_name, spawn_time, owner, ro
             )
             await channel.send(embed=embed)
 
-
 local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งเวลาเป็นไทย
-
 
 # ----------- คำสั่งดูรายการบอสที่ตั้งค่าไว้ ✅-----------
 @bot.tree.command(name="boss_notification_list", description="ดูรายการบอสที่ตั้งค่าแจ้งเตือน")
@@ -345,8 +331,6 @@ async def boss_notification_list(interaction: discord.Interaction):
             await interaction.followup.send("✅ ประกาศไปที่ห้องแจ้งเตือนเรียบร้อย!", ephemeral=True)
 
     await interaction.followup.send(embed=embed, ephemeral=True, view=ConfirmView(embed))  # ✅ ส่ง Embed ไปพร้อมปุ่ม
-
-
 # -------------------- คำสั่งทั้งหมดข้างบนใช้งานได้แล้ว --------------------
 
 # 🔹 รายชื่ออาชีพที่เลือกได้
@@ -359,7 +343,6 @@ class JobChoicesEnum(discord.Enum):
     KNIGHT = "Knight"
     GENERAL = "General"
     SLAYER = "Slayer"
-
 
 class GuildRoleManager:
     def __init__(self):
@@ -375,11 +358,9 @@ class GuildRoleManager:
     def get_role_id(self, guild_name):
         return self.guild_roles.get(guild_name)
 
-
 guild_role_manager = GuildRoleManager()
 admin_role_name = None  # Initially unset
 update_log_channel_id = None  # Initially unset
-
 
 # ----------- สร้างโพสต์update -----------
 @bot.tree.command(name="update_info_post", description="สร้างโพสต์สำหรับอัพเดทข้อมูล")
@@ -400,7 +381,6 @@ async def update_info_post(interaction: discord.Interaction, channel: discord.Te
     # ส่งข้อความพร้อมปุ่มไปยังช่องที่เลือก
     await channel.send(embed=embed, view=view)
     await interaction.response.send_message(f"✅ โพสต์สำหรับอัพเดทข้อมูลถูกสร้างใน {channel.mention}", ephemeral=True)
-
 
 # ----------- สร้างโพสต์ด้วยปุ่ม -----------
 class UpdateInfoView(discord.ui.View):
@@ -441,7 +421,7 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
         # ✅ ดึงวันเวลาปัจจุบันเป็น Asia/Bangkok
         now = datetime.datetime.now(local_tz)
         formatted_date = now.strftime("%d/%m/%Y %H:%M")  # แปลงวันที่เป็น DD/MM/YYYY HH:MM
-
+        
         # ✅ ตรวจสอบห้อง update log
         log_channel = bot.get_channel(log_channel_id) if log_channel_id else None
         if not log_channel:
@@ -507,30 +487,22 @@ class UpdateModal(discord.ui.Modal, title="𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫
         await log_channel.send(embed=embed)
         await interaction.response.send_message(f"✅ **{self.update_type}** 𝐔𝐩𝐝𝐚𝐭𝐞𝐝!!", ephemeral=True)
 
-
 # ----------- ตั้งค่าช่องและ Role -----------
 update_log_channel_id = None  # เก็บ ID ห้อง update log
 admin_role_name = "Admin"  # ชื่อ Role แอดมิน
-
-
 # ----------- ห้องสำหรับบันทึกอัพเดต -----------
 @bot.tree.command(name="set_update_log_channel", description="ตั้งค่าห้อง update log")
 async def set_update_log_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     guild_id = interaction.guild_id
     update_log_channels[guild_id] = channel.id  # ✅ แก้ไขให้ใช้ dictionary ที่ถูกต้อง
-    await interaction.response.send_message(f"✅ ตั้งค่าห้อง update log เป็น {channel.mention} เรียบร้อย",
-                                            ephemeral=True)
-
-
+    await interaction.response.send_message(f"✅ ตั้งค่าห้อง update log เป็น {channel.mention} เรียบร้อย", ephemeral=True)
 # ----------- ตั้งค่ายศแอดมิน -----------
 @bot.tree.command(name="set_admin_role", description="ตั้งค่า Role แอดมิน")
 async def set_admin_role(interaction: discord.Interaction, role: discord.Role):
     guild_id = interaction.guild_id
     admin_roles[guild_id] = role.name  # เก็บ Role แอดมินตามเซิร์ฟเวอร์
 
-    await interaction.response.send_message(f"✅ ตั้งค่า Role แอดมินเป็น {role.mention} สำหรับเซิร์ฟเวอร์นี้",
-                                            ephemeral=True)
-
+    await interaction.response.send_message(f"✅ ตั้งค่า Role แอดมินเป็น {role.mention} สำหรับเซิร์ฟเวอร์นี้", ephemeral=True)
 
 # ----------- ตั้งค่ายศกิลด์ที่ใช้งาน -----------
 @bot.tree.command(name="set_guild_active", description="ตั้งค่า Role ของกิลด์ที่ใช้งาน")
@@ -545,8 +517,6 @@ async def set_guild_active(interaction: discord.Interaction, guild_name: str, ro
         f"✅ ตั้งค่า Role **{role.name}** สำหรับกิลด์ **{guild_name}** แล้ว!",
         ephemeral=True
     )
-
-
 # ----------- ลบยศที่กิลด์ที่ใช้งาน -----------
 @bot.tree.command(name="remove_guild_active", description="Remove a guild from active selection")
 async def remove_guild_active(interaction: discord.Interaction, guild_name: str):
@@ -555,97 +525,6 @@ async def remove_guild_active(interaction: discord.Interaction, guild_name: str)
         await interaction.response.send_message(f"✅ ลบกิลด์ที่ไม่ใช้งานออกแล้ว: {guild_name}", ephemeral=True)
     else:
         await interaction.response.send_message("❌ ไม่มีกิลด์ที่ต้องการลบ.", ephemeral=True)
-# -----------
-def is_admin(member):
-    """ตรวจสอบว่าเป็นแอดมินหรือไม่"""
-    guild_id = member.guild.id
-    admin_role = admin_roles.get(guild_id)
-    return admin_role and discord.utils.get(member.roles, name=admin_role)
-
-
-@bot.tree.command(name='set_room_active', description='จัดการห้องที่บอททำงาน')
-@app_commands.choices(action=[
-    app_commands.Choice(name='ตั้งค่า', value='set'),
-    app_commands.Choice(name='แก้ไข', value='edit'),
-    app_commands.Choice(name='ดูห้องที่ตั้งค่า', value='view')
-])
-async def set_room_active(interaction: discord.Interaction, action: app_commands.Choice[str],
-                          channel: discord.TextChannel = None):
-    guild_id = interaction.guild_id
-
-    if action.value == 'set':
-        if not channel:
-            return await interaction.response.send_message('❌ โปรดระบุห้องที่ต้องการตั้งค่า', ephemeral=True)
-        active_rooms[guild_id] = channel.id
-        await interaction.response.send_message(f'✅ ตั้งค่าห้อง {channel.mention} ให้บอททำงานแล้ว!', ephemeral=True)
-
-    elif action.value == 'edit':
-        if not channel:
-            return await interaction.response.send_message('❌ โปรดระบุห้องใหม่ที่ต้องการตั้งค่า', ephemeral=True)
-        if guild_id in active_rooms:
-            del active_rooms[guild_id]  # ลบห้องเดิม
-        active_rooms[guild_id] = channel.id  # ตั้งค่าห้องใหม่
-        await interaction.response.send_message(f'✅ เปลี่ยนห้องเป็น {channel.mention} เรียบร้อยแล้ว!', ephemeral=True)
-
-    elif action.value == 'view':
-        if guild_id in active_rooms:
-            room = bot.get_channel(active_rooms[guild_id])
-            room_mention = room.mention if room else '❌ ไม่พบห้อง'
-            await interaction.response.send_message(f'🔹 ห้องที่ตั้งค่าอยู่: {room_mention}', ephemeral=True)
-        else:
-            await interaction.response.send_message('❌ ยังไม่มีการตั้งค่าห้อง', ephemeral=True)
-
-
-@bot.tree.command(name='set_emoji_bp', description='จัดการคะแนนอิโมจิ')
-@app_commands.choices(action=[
-    app_commands.Choice(name='ตั้งค่า', value='set'),
-    app_commands.Choice(name='แก้ไข', value='edit'),
-    app_commands.Choice(name='ลบ', value='delete')
-])
-async def set_emoji_bp(interaction: discord.Interaction, action: app_commands.Choice[str], emoji: str,
-                       points: int = None):
-    guild_id = interaction.guild_id
-    if guild_id not in emoji_bp:
-        emoji_bp[guild_id] = {}
-
-    if action.value == 'set' or action.value == 'edit':
-        if points is None:
-            return await interaction.response.send_message('❌ โปรดระบุคะแนน BP', ephemeral=True)
-        emoji_bp[guild_id][emoji] = points
-        await interaction.response.send_message(f'✅ ตั้งค่าอิโมจิ {emoji} ให้มีค่า {points} BP แล้ว!', ephemeral=True)
-    elif action.value == 'delete':
-        if emoji in emoji_bp[guild_id]:
-            del emoji_bp[guild_id][emoji]
-            await interaction.response.send_message(f'✅ ลบอิโมจิ {emoji} ออกจากระบบเรียบร้อยแล้ว!', ephemeral=True)
-        else:
-            await interaction.response.send_message(f'❌ ไม่พบอิโมจิ {emoji} ในระบบ', ephemeral=True)
-
-
-@bot.tree.command(name='check_bp', description='ดูคะแนน BP')
-async def check_bp(interaction: discord.Interaction, member: discord.Member = None):
-    guild_id = interaction.guild_id
-    if guild_id not in user_scores:
-        return await interaction.response.send_message('❌ ยังไม่มีการบันทึกคะแนน BP', ephemeral=True)
-
-    if member:
-        score = user_scores[guild_id].get(member.id, 0)
-        await interaction.response.send_message(f'🔹 {member.mention} มี {score} BP', ephemeral=True)
-    else:
-        scores = sorted(user_scores[guild_id].items(), key=lambda x: x[1], reverse=True)
-        leaderboard = '\n'.join([f'<@{user_id}>: {score} BP' for user_id, score in scores])
-        embed = discord.Embed(title='📜 Leaderboard BP', description=leaderboard, color=discord.Color.gold())
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
-@bot.tree.command(name='add_bp', description='เพิ่มคะแนน BP ให้สมาชิก')
-async def add_bp(interaction: discord.Interaction, member: discord.Member, points: int):
-    guild_id = interaction.guild_id
-    if guild_id not in user_scores:
-        user_scores[guild_id] = {}
-    if member.id not in user_scores[guild_id]:
-        user_scores[guild_id][member.id] = 0
-    user_scores[guild_id][member.id] += points
-    await interaction.response.send_message(f'✅ เพิ่ม {points} BP ให้ {member.mention} แล้ว!', ephemeral=True)
 
 server_on()
 
