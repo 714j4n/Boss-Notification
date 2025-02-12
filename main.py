@@ -79,7 +79,7 @@ class BossName(Enum):
     RUINED_KNIGHT = "Ruined Knight"
     TANDALLON = "Tandallon"
     DEFGIO = "Dergio"
-    
+
 # ----------- รายชื่อ Owner -----------
 class OwnerType(Enum):
     KNIGHT = "knight"
@@ -91,7 +91,7 @@ class OwnerType(Enum):
             if boss.value == value:
                 return boss
         return None
-    
+
 # ----------- รายชื่ออาชีพที่เลือกได้ -----------
 class JobChoicesEnum(discord.Enum):
     SNIPER = "Sniper"
@@ -340,7 +340,26 @@ async def boss(
     guild_id = interaction.guild_id
 
     # ---------------------- คำสั่งแจ้งเตือนบอส ----------------------
-    if boss_action.value == "notification":
+    if boss_action.value == "notification" and not sub_action:
+        print(f"[DEBUG] คำสั่ง /boss notification ถูกเรียกใช้งาน - {boss_name}")
+
+        now = datetime.datetime.now(local_tz)
+        spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)  # ✅ คำนวณ spawn_time
+        role = boss_roles.get(guild_id)  # ✅ ดึง Role ที่ต้องใช้สำหรับการแจ้งเตือน
+
+        if guild_id not in boss_notifications:
+            boss_notifications[guild_id] = []
+
+        boss_notifications[guild_id].append({
+            "boss_name": boss_name.name,
+            "spawn_time": spawn_time,
+            "owner": owner.value
+        })
+
+        # ✅ เรียก schedule_boss_notifications() เพื่อให้ระบบแจ้งเตือนทำงาน
+        await schedule_boss_notifications(guild_id, boss_name.name, spawn_time, owner.value, role)
+
+        await interaction.response.send_message(f"✅ ตั้งค่าแจ้งเตือนบอส {boss_name.value} แล้ว!", ephemeral=True)
 
         # 1️⃣ ดูรายการแจ้งเตือนบอส (⚡ พร้อมปุ่ม "📢 ประกาศ")
         if sub_action and sub_action.value == "list":
