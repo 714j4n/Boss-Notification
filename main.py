@@ -562,15 +562,6 @@ def is_admin(member):
     admin_role = admin_roles.get(guild_id)
     return admin_role and discord.utils.get(member.roles, name=admin_role)
 
-
-@bot.tree.command(name="set_admin_role", description="ตั้งค่า Role แอดมิน")
-async def set_admin_role(interaction: discord.Interaction, role: discord.Role):
-    guild_id = interaction.guild_id
-    admin_roles[guild_id] = role.name  # เก็บ Role แอดมินตามเซิร์ฟเวอร์
-    await interaction.response.send_message(f"✅ ตั้งค่า Role แอดมินเป็น {role.mention} สำหรับเซิร์ฟเวอร์นี้",
-                                            ephemeral=True)
-
-
 @bot.tree.command(name="view_admin_role", description="ดู Role แอดมินที่ตั้งค่าไว้")
 async def view_admin_role(interaction: discord.Interaction):
     guild_id = interaction.guild_id
