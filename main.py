@@ -39,33 +39,6 @@ async def on_ready():
         print(f"❌ Error syncing commands: {e}")
 
 # --------------------------------------------------
-# ----------- ดูที่ตั้งค่าของเซิร์ฟเวอร์ *มีอัพเดท* ✅-----------
-@bot.tree.command(name="view_setting", description="ดูการตั้งค่าการแจ้งเตือน")
-async def view_setting(interaction: discord.Interaction):
-    guild_id = interaction.guild_id
-    role_id = boss_roles.get(guild_id)
-
-    role_display = f"<@&{role_id}>" if role_id else "❌ ยังไม่ได้ตั้งค่า"  # ✅
-    boss_channel_id = boss_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า")  # ✅
-    broadcast_channel_id = broadcast_channels.get(guild_id, "❌ ยังไม่ได้ตั้งค่า")  # ✅
-    admin_role_name = admin_roles.get(guild_id, "❌ ยังไม่ได้ตั้งค่า")
-    update_log_channel_id = update_log_channels.get(guild_id)
-    update_log_channel_display = f"<#{update_log_channel_id}>" if update_log_channel_id else "❌ ยังไม่ได้ตั้งค่า"
-    active_guilds = guild_active_roles.get(guild_id, {})
-    active_guilds_display = "\n".join(
-        [f"🔹 {name}: <@&{rid}>" for name, rid in active_guilds.items()]) if active_guilds else "❌ ยังไม่ได้ตั้งค่า"
-
-    embed = discord.Embed(title="🔧 การตั้งค่าของเซิร์ฟเวอร์", color=discord.Color.blue())
-    embed.add_field(name="🔔 Role Notification", value=role_display, inline=False)  # ✅
-    embed.add_field(name="📢 Boss Notification Channel", value=f"<#{boss_channel_id}>", inline=False)  # ✅
-    embed.add_field(name="📡 Broadcast Channel", value=f"[{broadcast_channel_id}]", inline=False)  # ✅
-    embed.add_field(name="🛠️ Admin Role", value=admin_role_name, inline=False)
-    embed.add_field(name="📝 Update Log Channel", value=update_log_channel_display, inline=False)
-    embed.add_field(name="🏰 Active Guilds", value=active_guilds_display, inline=False)
-
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
-    print(f"[DEBUG] view_setting for guild {guild_id}")
 
 # ----------- BossName(Enum) ✅-----------
 class BossName(Enum):
