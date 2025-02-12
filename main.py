@@ -563,6 +563,39 @@ def is_admin(member):
     return admin_role and discord.utils.get(member.roles, name=admin_role)
 
 
+@bot.tree.command(name='set_room_active', description='จัดการห้องที่บอททำงาน')
+@app_commands.choices(action=[
+    app_commands.Choice(name='ตั้งค่า', value='set'),
+    app_commands.Choice(name='แก้ไข', value='edit'),
+    app_commands.Choice(name='ดูห้องที่ตั้งค่า', value='view')
+])
+async def set_room_active(interaction: discord.Interaction, action: app_commands.Choice[str],
+                          channel: discord.TextChannel = None):
+    guild_id = interaction.guild_id
+
+    if action.value == 'set':
+        if not channel:
+            return await interaction.response.send_message('❌ โปรดระบุห้องที่ต้องการตั้งค่า', ephemeral=True)
+        active_rooms[guild_id] = channel.id
+        await interaction.response.send_message(f'✅ ตั้งค่าห้อง {channel.mention} ให้บอททำงานแล้ว!', ephemeral=True)
+
+    elif action.value == 'edit':
+        if not channel:
+            return await interaction.response.send_message('❌ โปรดระบุห้องใหม่ที่ต้องการตั้งค่า', ephemeral=True)
+        if guild_id in active_rooms:
+            del active_rooms[guild_id]  # ลบห้องเดิม
+        active_rooms[guild_id] = channel.id  # ตั้งค่าห้องใหม่
+        await interaction.response.send_message(f'✅ เปลี่ยนห้องเป็น {channel.mention} เรียบร้อยแล้ว!', ephemeral=True)
+
+    elif action.value == 'view':
+        if guild_id in active_rooms:
+            room = bot.get_channel(active_rooms[guild_id])
+            room_mention = room.mention if room else '❌ ไม่พบห้อง'
+            await interaction.response.send_message(f'🔹 ห้องที่ตั้งค่าอยู่: {room_mention}', ephemeral=True)
+        else:
+            await interaction.response.send_message('❌ ยังไม่มีการตั้งค่าห้อง', ephemeral=True)
+
+
 @bot.tree.command(name='set_emoji_bp', description='จัดการคะแนนอิโมจิ')
 @app_commands.choices(action=[
     app_commands.Choice(name='ตั้งค่า', value='set'),
@@ -621,36 +654,6 @@ async def add_bp(interaction: discord.Interaction, member: discord.Member, point
     user_scores[guild_id][member.id] += points
     await interaction.response.send_message(f'✅ เพิ่ม {points} BP ให้ {member.mention} แล้ว!', ephemeral=True)
 
-
-@bot.event
-async def on_reaction_add(reaction, user):
-    if user.bot:
-        return  # ข้ามบอท
-
-    message = reaction.message
-    guild_id = message.guild.id
-    if guild_id not in active_rooms or message.channel.id != active_rooms[guild_id]:
-        return  # ไม่ใช่ห้องที่กำหนด
-
-    if guild_id not in admin_roles:
-        return  # ถ้ายังไม่มี Role แอดมินที่ตั้งค่าไว้ ไม่ให้ทำงาน
-
-    if not is_admin(user):
-        return  # เฉพาะแอดมินเท่านั้น
-
-    emoji = str(reaction.emoji)
-    if emoji not in emoji_bp.get(guild_id, {}):
-        return  # ไม่ใช่อิโมจิที่กำหนดไว้
-
-    points = emoji_bp[guild_id][emoji]
-    user_id = message.author.id
-    if guild_id not in user_scores:
-        user_scores[guild_id] = {}
-    if user_id not in user_scores[guild_id]:
-        user_scores[guild_id][user_id] = 0
-
-    user_scores[guild_id][user_id] += points
-    
 server_on()
 
 # เริ่มรันบอท
